@@ -72,7 +72,7 @@ class Welcome(Frame):
 
             elif self.play_rect.collidepoint(event.pos):
                 # if the user tries to start the game, we don't change the active frame, but we send a request to the server
-                self.client.send_request("START")
+                self.client.send_request({"type": "EVENT", "name": "START", "args": None})
 
         return None
 

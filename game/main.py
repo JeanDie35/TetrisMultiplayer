@@ -66,7 +66,7 @@ while running:
 
         if next_frame == game_over and active_frame == game:
             # sends a request to the server saying that the game is over
-            client.send_request("OVER")
+            client.send_request({"type": "EVENT", "name": "OVER", "args": None})
 
             game_over.score = game.score
             game.reset()
@@ -89,7 +89,7 @@ while running:
             # saving all the data
             config.save_file()
             # sending a request to the server saying that we want to close the conn
-            client.send_request("CLOSE")
+            client.send_request({"type": "EVENT", "name": "CLOSE", "args": None})
             pygame.quit()
             running = False
 

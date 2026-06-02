@@ -16,7 +16,9 @@ class Server:
         self.server_ip = self.get_ip_address()  # server hostname or IP address
         self.port = config.data["port"]  # server port number
         self.blocks = [self.get_random_number()]
+
         self.in_game = False
+        self.nb_online_players = 0
 
 
     def get_ip_address(self) -> str:
@@ -32,14 +34,15 @@ class Server:
 
     def close_conn_with(self, client_key: str):
         print(f"Closing connection with client : {client_key}")
-        self.clients[client_key]["socket"].send(encode("CLOSED"))
+        self.clients[client_key]["socket"].send({"name": "CLOSED", "args": None})
 
     def start_game(self):
         for client in self.clients:
             # checks if the client is online and not already playing
             if self.clients[client]["online"]:
-                self.clients[client]["socket"].send(encode("GAME_STARTED"))
+                self.clients[client]["socket"].send(encode({"name": "GAME_STARTED", "args": None}))
                 self.clients[client]["in_game"] = True
+        self.nb_online_players = len([client for client in self.clients if self.clients[client]["online"]])
         self.in_game = True
 
     def end_game(self, client_key: str):
@@ -69,7 +72,7 @@ class Server:
 
                 else:
                     client_key = self.generate_key()
-                    self.clients[client_key] = {"online": True, "socket": client_socket, "in_game": False, "block": 0}
+                    self.clients[client_key] = {"online": True, "socket": client_socket, "in_game": False, "block": 0, "score" : 0, "grid": None}
 
             else:
                 raise Exception("Game is already started")
@@ -91,31 +94,44 @@ class Server:
             try:
                 while True:
                     # receive and print client messages
-                    request = decode(client_socket.recv(1024)).upper()
-
-                    if request == "CLOSE":
-                        self.close_conn_with(key)
-                        break
-
-                    elif request == "START":
-                        self.start_game()
-
-                    elif request == "NEXT_BLOCK":
-                        self.next_block(key)
-
-                    elif request == "OVER":
-                        self.end_game(key)
-
-                    else:
-                        response = "accepted"
-
-                        client_socket.send(encode(f"{request}:{response}"))
-
+                    request = decode(client_socket.recv(1024))
                     print(f"Received: {request}")
 
+                    # when the user sends a request to change a state
+                    if request["type"] == "EVENT":
 
-            except Exception as e:
-                print(f"Error when handling client: {e}")
+                        if request["name"] == "CLOSE":
+                            self.close_conn_with(key)
+                            break
+
+                        elif request["name"] == "START":
+                            self.start_game()
+
+                        elif request["name"] == "OVER":
+                            self.end_game(key)
+
+                    # if the user wants to update existing data in the server
+                    elif request["type"] == "PUT" != -1:
+
+                        if request["name"] == "GRID":
+                            self.clients[key]["grid"] = request["args"]
+
+                        elif request["name"] == "SCORE":
+                            self.clients[key]["score"] = request["args"]
+
+                    # when the user sends a request and waits for a value
+                    elif request["type"] == "GET":
+
+                        if request["name"] == "NEXT_BLOCK":
+                            self.next_block(key)
+
+                        elif request["name"] == "GRID":
+                            self.send_grid(key)
+
+                        elif request["name"] == "SCORE":
+                            self.send_score(key)
+
+
             finally:
                 self.clients[key]["online"] = False
                 client_socket.close()
@@ -161,7 +177,26 @@ class Server:
 
         # sends the new number to the client
         block = self.blocks[self.clients[key]["block"]]
-        self.clients[key]["socket"].send(encode(f"NEXT_BLOCK:{block}"))
+        self.clients[key]["socket"].send(encode({"name": "NEXT_BLOCK", "args": block}))
+
+    def send_grid(self, key):
+        if self.nb_online_players <= 2:
+            opponent = None
+            for client in self.clients:
+                if client != key:
+                    opponent = client
+            # send the opponent's grid
+            self.clients[key]["socket"].send(encode({"name": "GRID", "args": self.clients[opponent]["grid"]}))
+
+    def send_score(self, key):
+        if self.nb_online_players <= 2:
+            opponent = None
+            for client in self.clients:
+                if client != key:
+                    opponent = client
+
+            self.clients[key]["socket"].send(encode({"name": "SCORE", "args": self.clients[opponent]["score"]}))
+
 
 
 server = Server()

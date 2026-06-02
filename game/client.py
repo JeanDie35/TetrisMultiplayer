@@ -15,6 +15,7 @@ class Client:
 
         # we will use a Queue because with the get method it will wait until the server responds
         self.response = None
+
     def connect(self) -> str | None:
         """""
         return the client's key
@@ -50,29 +51,28 @@ class Client:
     def get_response(self):
         while True:
 
-            self.response = decode(self.socket.recv(1024)).upper()
+            self.response = decode(self.socket.recv(1024))
             print(f"Received : {self.response}")
 
-            if self.response.find("GAME_STARTED") != -1:
+            if self.response["name"] == "GAME_STARTED":
                 # will tell the game to start
                 self.game_started = True
 
-            elif self.response.find("CLOSED") != -1:
+            elif self.response["name"] == "CLOSED":
                 self.close_conn()
                 break
 
 
-    def send_request(self, request):
+    def send_request(self, request: dict):
         # sending messages
         self.socket.send(encode(request))
 
     def get_color(self):
-        self.send_request("NEXT_BLOCK")
+        self.send_request({"type": "GET", "name": "NEXT_BLOCK", "args": None})
         # waiting for the server to answer
-        while self.response.find("NEXT_BLOCK") == -1:
+        while self.response["name"] != "NEXT_BLOCK":
             pass
-        self.response = self.response.split(":")[1]
-        return self.response
+        return self.response["args"]
 
     def close_conn(self):
         # close client socket (connection to the server)

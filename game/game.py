@@ -267,11 +267,34 @@ class Game:
             if event.key == self.key_binds["speed up"]:
                 self.active_piece.speed = self.base_speed
 
+# updates the render
+
+# updates the opponent's data
+
+    def update_opponent_grid(self, grid):
+        for y in range(grid.shape[0]):
+
+            for x in range(grid.shape[1]):
+
+                if grid[y, x] in range(self.config.data["first_fixed_block"], self.config.data["last_fixed_block"] + 1):
+                    self.screen.blit(blocks[grid[y, x]]["image"], (
+                        self.playing_screen_size[0] + self.config.data["sidebar_offset"] + x * BLOCK_SIZE // 3,
+                        170 + y * BLOCK_SIZE // 3,
+                        BLOCK_SIZE // 3, BLOCK_SIZE // 3))
+
+    def update_opponent_score(self, score):
+        score_text = self.font.render(f"Opponent's score : {score}", 1, self.config.data["colors"]["white"])
+        self.screen.blit(score_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"], 400))
+
+    # updates the user's data
+
     def update_next_block(self):
         next_array = blocks[self.next_color]["arrays"][0]
 
         for y in range(next_array.shape[0]):
+
             for x in range(next_array.shape[1]):
+
                 if next_array[y, x] == self.config.data["moving_block"]:
                     self.screen.blit(blocks[self.next_color]["image"], (
                         self.playing_screen_size[0] + self.config.data["sidebar_offset"] + x * BLOCK_SIZE,
@@ -280,11 +303,11 @@ class Game:
 
     def update_score(self):
         score_text = self.font.render(f"Score : {self.score}", 1, self.config.data["colors"]["white"])
-        self.screen.blit(score_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"], 200))
+        self.screen.blit(score_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"], 150))
 
     def update_texts(self):
         blocks_text = self.font.render("Next block:", 1, self.config.data["colors"]["white"])
-        self.screen.blit(blocks_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"], 20))
+        self.screen.blit(blocks_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"], 10))
 
     def render(self):
         """""
@@ -297,18 +320,25 @@ class Game:
         self.update_score()
         self.update_texts()
         self.update_next_block()
+
+        self.get_opponent_data()
+
         # creating the right part of the screen
         pygame.draw.rect(self.screen, self.config.data["colors"]["blue"],
                          ((self.playing_screen_size[0], 0), (10, self.screen.get_height())))
+
 
     def update_blocks(self):
         # updating the blocks
         self.screen.fill(self.config.data["bg_color"])
         non_zero = np.argwhere(self.grid != 0)
+
         for y, x in non_zero:
+
             if self.is_fixed_block((y, x)):
                 self.screen.blit(blocks[int(self.grid[y, x])]["image"],
                                  (x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
+
             else:
                 self.screen.blit(blocks[self.active_piece.color_value]["image"],
                                  (x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
@@ -316,13 +346,16 @@ class Game:
     def check_lines(self):
         # number of lines broken at the same time
         lines_in_a_row = 0
+
         # checks if grid line of grid is only made of 2s, if so we move all the lines higher than this line down
         for i in range(self.grid.shape[0]):
+
             if not self.config.data["empty"] in self.grid[i, :] and not self.config.data["moving_block"] in self.grid[i, :]:
                 self.line_broken += 1
                 lines_in_a_row += 1
                 self.score += self.config.data["score_per_line"] * lines_in_a_row
                 self.move_line_down(i)
+
                 if self.line_broken % 10 == 0:
                     self.base_speed += 0.5
 
@@ -357,6 +390,26 @@ class Game:
         self.insert_blocks()
         self.next_color = int(self.client.get_color())
 
+    def send_data(self):
+        """""
+        sends the grid and the score to the server
+        """""
+        self.client.send_request({"type": "PUT", "name": "GRID", "args": self.grid.tolist()})
+        self.client.send_request({"type": "PUT", "name": "SCORE", "args": self.score})
+
+    def get_opponent_data(self):
+        # waits for server to send the opponent's data
+        while self.client.response["name"] != "GRID":
+            pass
+        # updates the opponen'ts grid after transforming the response into a list
+        self.update_opponent_grid(np.ndarray(self.client.response["args"]))
+
+        while self.client.response["name"] != "SCORE":
+            pass
+        self.update_opponent_score(self.client.response["args"])
+
+
+
     def update(self):
 
         self.update_blocks()
@@ -364,6 +417,8 @@ class Game:
         self.check_lines()
 
         self.handle_falling()
+
+        self.send_data()
 
         self.render()
 
