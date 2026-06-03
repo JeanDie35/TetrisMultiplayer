@@ -5,13 +5,6 @@ def encode(msg) -> bytes:
     return json.dumps(msg).encode("utf-8")
 
 def decode(msg: bytes):
-    print("msg : ", msg)
-    msg2 = msg.decode("utf-8")
-    print("decoded : ", msg2)
-    print(type(msg2))
-    msg2 = json.loads(msg2)
-    print("loaded : ", msg2)
-    print(type(msg2))
     return json.loads(msg.decode("utf-8"))
 
 
@@ -40,6 +33,4 @@ def decode(msg: bytes):
 
         return msg
 """""
-
-
 

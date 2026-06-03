@@ -34,7 +34,7 @@ class Server:
 
     def close_conn_with(self, client_key: str):
         print(f"Closing connection with client : {client_key}")
-        self.clients[client_key]["socket"].send({"name": "CLOSED", "args": None})
+        self.clients[client_key]["socket"].send(encode({"name": "CLOSED", "args": None}))
 
     def start_game(self):
         for client in self.clients:
@@ -55,6 +55,15 @@ class Server:
 
             else:
                 self.in_game = False
+
+    def recv_nb_bytes(self, key: str, nb_bytes: int):
+        data = b""  # empty buffer
+
+        while len(data) < nb_bytes:
+            chunk = self.clients[key]["socket"].recv(nb_bytes - len(data))
+            data += chunk
+
+        return data
 
     def get_key(self, client_socket: socket.socket) -> str | None:
         client_key = decode(client_socket.recv(1024))
@@ -93,9 +102,14 @@ class Server:
         if key is not None:
             try:
                 while True:
-                    # receive and print client messages
-                    request = decode(client_socket.recv(1024))
-                    print(f"Received: {request}")
+
+                    # getting the size of the request which is stored in 4 bytes in front of the request itself
+                    request_size = self.recv_nb_bytes(key, config.data["nb_bytes_size"])
+                    # transforming bytes to int
+                    request_size = int.from_bytes(request_size, byteorder="big")
+
+                    # receive the message, knowing the size allow us to make sure the request doesn't mix with other
+                    request = decode(self.recv_nb_bytes(key, request_size))
 
                     # when the user sends a request to change a state
                     if request["type"] == "EVENT":
@@ -180,16 +194,19 @@ class Server:
         self.clients[key]["socket"].send(encode({"name": "NEXT_BLOCK", "args": block}))
 
     def send_grid(self, key):
-        if self.nb_online_players <= 2:
+        if self.nb_online_players == 2:
             opponent = None
             for client in self.clients:
                 if client != key:
                     opponent = client
+
             # send the opponent's grid
             self.clients[key]["socket"].send(encode({"name": "GRID", "args": self.clients[opponent]["grid"]}))
 
+        else:
+            self.clients[key]["socket"].send(encode({"name": "GRID", "args": None}))
     def send_score(self, key):
-        if self.nb_online_players <= 2:
+        if self.nb_online_players == 2:
             opponent = None
             for client in self.clients:
                 if client != key:
@@ -197,6 +214,8 @@ class Server:
 
             self.clients[key]["socket"].send(encode({"name": "SCORE", "args": self.clients[opponent]["score"]}))
 
+        else:
+            self.clients[key]["socket"].send(encode({"name": "SCORE", "args": None}))
 
 
 server = Server()

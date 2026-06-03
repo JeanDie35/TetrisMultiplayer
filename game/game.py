@@ -1,5 +1,4 @@
 import numpy as np
-import random
 import pygame
 
 pygame.init()
@@ -59,7 +58,7 @@ class ActivePiece:
         # stores the actual positon of the array, so when it turns, it doesn't move right
         self.pos = [0, self.game.playing_screen_size[0] // 2 // BLOCK_SIZE]
 
-    def get_coords(self, array: np.array, reverse: bool) -> list:
+    def get_coords(self, array: np.ndarray, reverse: bool) -> list:
         """""
         returns the coordinates of every ones in grid
         """""
@@ -76,7 +75,7 @@ class ActivePiece:
             state = 0
         return state
 
-    def simulate_right_turn(self) -> np.array:
+    def simulate_right_turn(self) -> np.ndarray:
         """""
         returns grid turned array
         """""
@@ -89,7 +88,7 @@ class ActivePiece:
             state = 3
         return state
 
-    def simulate_left_turn(self) -> np.array:
+    def simulate_left_turn(self) -> np.ndarray:
         """""
         returns grid turned array
         """""
@@ -114,7 +113,7 @@ class ActivePiece:
                 break
         return movable
 
-    def can_fit(self, piece_array: np.array) -> bool:
+    def can_fit(self, piece_array: np.ndarray) -> bool:
         """""
         checks if the array can fit at the moving blocks position
         """""
@@ -277,15 +276,16 @@ class Game:
             for x in range(grid.shape[1]):
 
                 if grid[y, x] in range(self.config.data["first_fixed_block"], self.config.data["last_fixed_block"] + 1):
-                    self.screen.blit(blocks[grid[y, x]]["image"], (
+                    self.screen.blit(pygame.transform.scale(blocks[grid[y, x]]["image"], (BLOCK_SIZE // 3, BLOCK_SIZE // 3)), (
                         self.playing_screen_size[0] + self.config.data["sidebar_offset"] + x * BLOCK_SIZE // 3,
-                        170 + y * BLOCK_SIZE // 3,
-                        BLOCK_SIZE // 3, BLOCK_SIZE // 3))
+                        180 + y * BLOCK_SIZE // 3))
 
     def update_opponent_score(self, score):
-        score_text = self.font.render(f"Opponent's score : {score}", 1, self.config.data["colors"]["white"])
-        self.screen.blit(score_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"], 400))
+        opponent_text = self.font.render("Opponent's", 1, self.config.data["colors"]["white"])
+        self.screen.blit(opponent_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"], 400))
 
+        score_text = self.font.render(f"score : {score}", 1, self.config.data["colors"]["white"])
+        self.screen.blit(score_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"], 440))
     # updates the user's data
 
     def update_next_block(self):
@@ -303,7 +303,7 @@ class Game:
 
     def update_score(self):
         score_text = self.font.render(f"Score : {self.score}", 1, self.config.data["colors"]["white"])
-        self.screen.blit(score_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"], 150))
+        self.screen.blit(score_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"], 170))
 
     def update_texts(self):
         blocks_text = self.font.render("Next block:", 1, self.config.data["colors"]["white"])
@@ -394,19 +394,32 @@ class Game:
         """""
         sends the grid and the score to the server
         """""
-        self.client.send_request({"type": "PUT", "name": "GRID", "args": self.grid.tolist()})
+        # transform the grid into a list of int
+        grid = self.grid.astype(int).tolist()
+        self.client.send_request({"type": "PUT", "name": "GRID", "args": grid})
         self.client.send_request({"type": "PUT", "name": "SCORE", "args": self.score})
 
     def get_opponent_data(self):
+
+        self.client.send_request({"type": "GET", "name": "GRID", 'args': None})
         # waits for server to send the opponent's data
+        print("Waiting for opponent grid...")
         while self.client.response["name"] != "GRID":
             pass
-        # updates the opponen'ts grid after transforming the response into a list
-        self.update_opponent_grid(np.array(self.client.response["args"]))
 
+        if self.client.response["args"] is not None:
+            # updates the opponen'ts grid after transforming the response into a list
+            grid = np.array(self.client.response["args"])
+            self.update_opponent_grid(grid)
+
+
+        self.client.send_request({"type": "GET", "name": "SCORE", 'args': None})
+        print("Waiting for opponent score...")
         while self.client.response["name"] != "SCORE":
             pass
-        self.update_opponent_score(self.client.response["args"])
+        print("Opponent data received.")
+        if not self.client.response["args"] is None:
+            self.update_opponent_score(self.client.response["args"])
 
 
 

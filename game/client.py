@@ -6,10 +6,12 @@ from tools import decode, encode
 class Client:
 
     def __init__(self, config, key=" "):
+        self.config = config
+
         # create a socket object
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_ip = config.data["server_ip"]  # replace with the server's IP address
-        self.server_port = config.data["port"]  # replace with the server's port number
+        self.server_ip = self.config.data["server_ip"]  # replace with the server's IP address
+        self.server_port = self.config.data["port"]  # replace with the server's port number
         self.key = key
         self.game_started = False
 
@@ -64,8 +66,12 @@ class Client:
 
 
     def send_request(self, request: dict):
-        # sending messages
-        self.socket.send(encode(request))
+        print(f"Sent : {request}")
+        data = encode(request)
+        # transform the size in four bytes
+        size = len(data).to_bytes(self.config.data["nb_bytes_size"], byteorder="big")
+        # sending messages with the size of the data in front
+        self.socket.sendall(size + data)
 
     def get_color(self):
         self.send_request({"type": "GET", "name": "NEXT_BLOCK", "args": None})
