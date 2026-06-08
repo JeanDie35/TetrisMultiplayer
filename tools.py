@@ -2,11 +2,22 @@ import json
 import numpy as np
 
 def encode(msg) -> bytes:
+    print("encode", msg)
     return json.dumps(msg).encode("utf-8")
 
 def decode(msg: bytes):
+    print("decode", msg)
     return json.loads(msg.decode("utf-8"))
 
+
+def recv_nb_bytes(socket, nb_bytes: int):
+    data = b""  # empty buffer
+
+    while len(data) < nb_bytes:
+        chunk = socket.recv(nb_bytes - len(data))
+        data += chunk
+
+    return data
 
 """""
 import json

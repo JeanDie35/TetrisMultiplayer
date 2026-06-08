@@ -1,5 +1,6 @@
 import numpy as np
 import pygame
+import time
 
 pygame.init()
 
@@ -400,26 +401,15 @@ class Game:
         self.client.send_request({"type": "PUT", "name": "SCORE", "args": self.score})
 
     def get_opponent_data(self):
-
-        self.client.send_request({"type": "GET", "name": "GRID", 'args': None})
-        # waits for server to send the opponent's data
-        print("Waiting for opponent grid...")
-        while self.client.response["name"] != "GRID":
-            pass
-
-        if self.client.response["args"] is not None:
-            # updates the opponen'ts grid after transforming the response into a list
-            grid = np.array(self.client.response["args"])
+        print(self.client.responses)
+        print('GRID' in self.client.responses)
+        # updates the opponen'ts grid after transforming the response into a list
+        if 'GRID' in self.client.responses and self.client.responses['GRID'] is not None:
+            grid = np.array(self.client.responses["GRID"])
             self.update_opponent_grid(grid)
 
-
-        self.client.send_request({"type": "GET", "name": "SCORE", 'args': None})
-        print("Waiting for opponent score...")
-        while self.client.response["name"] != "SCORE":
-            pass
-        print("Opponent data received.")
-        if not self.client.response["args"] is None:
-            self.update_opponent_score(self.client.response["args"])
+        if 'SCORE' in self.client.responses and self.client.responses['SCORE'] is not None:
+            self.update_opponent_score(self.client.responses["SCORE"])
 
 
 

@@ -1,6 +1,6 @@
 import socket
 import threading
-from tools import decode, encode
+from tools import decode, encode, recv_nb_bytes
 
 # handles the connection with the server
 class Client:
@@ -15,8 +15,7 @@ class Client:
         self.key = key
         self.game_started = False
 
-        # we will use a Queue because with the get method it will wait until the server responds
-        self.response = None
+        self.responses = {}
 
     def connect(self) -> str | None:
         """""
@@ -53,32 +52,48 @@ class Client:
     def get_response(self):
         while True:
 
-            self.response = decode(self.socket.recv(1024))
-            print(f"Received : {self.response}")
+            # getting the size of the request which is stored in 4 bytes in front of the request itself
+            response_size = recv_nb_bytes(self.socket, self.config.data["header_size"])
+            # transforming bytes to int
+            response_size = int.from_bytes(response_size, byteorder="big")
 
-            if self.response["name"] == "GAME_STARTED":
+            # receive the message, knowing the size allow us to make sure the request doesn't mix with other
+            response = decode(recv_nb_bytes(self.socket, response_size))
+
+            self.responses[response["name"]] = response["args"]
+
+            print(f"Received : {response}")
+
+            if response["name"] == "GAME_STARTED":
                 # will tell the game to start
                 self.game_started = True
 
-            elif self.response["name"] == "CLOSED":
+            elif response["name"] == "CLOSED":
                 self.close_conn()
                 break
 
 
     def send_request(self, request: dict):
+
         print(f"Sent : {request}")
+
+        # delete the old value so we can know when the new value has arrived
+        if request["name"] in self.responses and request["type"] == 'GET':
+            self.responses[request["name"]] = None
+
+
         data = encode(request)
         # transform the size in four bytes
-        size = len(data).to_bytes(self.config.data["nb_bytes_size"], byteorder="big")
+        size = len(data).to_bytes(self.config.data["header_size"], byteorder="big")
+
         # sending messages with the size of the data in front
         self.socket.sendall(size + data)
 
     def get_color(self):
         self.send_request({"type": "GET", "name": "NEXT_BLOCK", "args": None})
-        # waiting for the server to answer
-        while self.response["name"] != "NEXT_BLOCK":
+        while not "NEXT_BLOCK" in self.responses or self.responses["NEXT_BLOCK"] is None :
             pass
-        return self.response["args"]
+        return self.responses["NEXT_BLOCK"]
 
     def close_conn(self):
         # close client socket (connection to the server)

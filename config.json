@@ -17,7 +17,7 @@
     "first_fixed_block": 2,
     "last_fixed_block": 8,
     "base_speed": 1,
-    "fall_tick_rate": 5,
+    "fall_tick_rate": 15,
     "score_per_block": 1,
     "score_per_line": 5,
     "best_score": 159,
@@ -55,5 +55,5 @@
     },
     "port": 8000,
     "server_ip": "192.168.1.25",
-    "nb_bytes_size": 4
+    "header_size": 4
 }
