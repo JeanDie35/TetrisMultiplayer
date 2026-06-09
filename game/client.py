@@ -15,6 +15,7 @@ class Client:
         self.key = key
         self.game_started = False
 
+        # dict to store the server's responses depending on the name of the response
         self.responses = {}
 
     def connect(self) -> str | None:
@@ -39,7 +40,8 @@ class Client:
                 self.key = response
                 print(f"Your key to connect to the server is {self.key}")
 
-                # when the user is connected, we wait for the server to start
+                # when the user is connected, we start a thread that will listen for incoming responses and store
+                # them is self.responses
                 start_thread = threading.Thread(target=self.get_response)
                 start_thread.start()
 
@@ -60,6 +62,7 @@ class Client:
             # receive the message, knowing the size allow us to make sure the request doesn't mix with other
             response = decode(recv_nb_bytes(self.socket, response_size))
 
+            # store the response's arguments in self.responses
             self.responses[response["name"]] = response["args"]
 
             print(f"Received : {response}")
@@ -78,6 +81,7 @@ class Client:
         print(f"Sent : {request}")
 
         # delete the old value so we can know when the new value has arrived
+        # only works for GET request because the others don't expect a response
         if request["name"] in self.responses and request["type"] == 'GET':
             self.responses[request["name"]] = None
 
@@ -90,7 +94,9 @@ class Client:
         self.socket.sendall(size + data)
 
     def get_color(self):
+        # sends a request for the next block
         self.send_request({"type": "GET", "name": "NEXT_BLOCK", "args": None})
+        # waits for the server to answer
         while not "NEXT_BLOCK" in self.responses or self.responses["NEXT_BLOCK"] is None :
             pass
         return self.responses["NEXT_BLOCK"]

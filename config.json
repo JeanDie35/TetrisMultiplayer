@@ -20,16 +20,16 @@
     "fall_tick_rate": 15,
     "score_per_block": 1,
     "score_per_line": 5,
-    "best_score": 159,
+    "best_score": 186,
     "FPS": 60,
     "first_accepted_letter": 97,
     "last_accepted_letter": 122,
     "key_binds": {
-        "right": 100,
-        "left": 113,
-        "speed up": 115,
-        "turn right": 1073741904,
-        "turn left": 1073741903
+        "right": 1073741903,
+        "left": 1073741904,
+        "speed up": 1073741905,
+        "turn right": 122,
+        "turn left": 97
     },
     "colors": {
         "black": [

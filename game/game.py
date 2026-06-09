@@ -322,7 +322,8 @@ class Game:
         self.update_texts()
         self.update_next_block()
 
-        self.get_opponent_data()
+        # we also update the opp
+        self.get_update_opponent_data()
 
         # creating the right part of the screen
         pygame.draw.rect(self.screen, self.config.data["colors"]["blue"],
@@ -397,10 +398,10 @@ class Game:
         """""
         # transform the grid into a list of int
         grid = self.grid.astype(int).tolist()
-        self.client.send_request({"type": "PUT", "name": "GRID", "args": grid})
-        self.client.send_request({"type": "PUT", "name": "SCORE", "args": self.score})
+        self.client.send_request({"type": "TRANSFER", "name": "GRID", "args": grid})
+        self.client.send_request({"type": "TRANSFER", "name": "SCORE", "args": self.score})
 
-    def get_opponent_data(self):
+    def get_update_opponent_data(self):
         print(self.client.responses)
         print('GRID' in self.client.responses)
         # updates the opponen'ts grid after transforming the response into a list

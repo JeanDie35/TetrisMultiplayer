@@ -40,6 +40,7 @@ if client_key is None:
     pygame.quit()
 
 else:
+    # creating the frames
     welcome = Welcome(screen, config, client)
     game = Game(screen, config)
     settings = Settings(screen, config)
