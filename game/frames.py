@@ -18,7 +18,11 @@ assets = {
         "settings": pygame.image.load("assets/settings_button.png"),
         "back": pygame.image.load("assets/back_button.png"),
         "victory": pygame.image.load("assets/victory.png"),
-        "connection": pygame.image.load("assets/connection_button.png")
+        "connection": pygame.image.load("assets/connection_button.png"),
+        "rank1": pygame.image.load("assets/gold_rank.png"),
+        "rank2": pygame.image.load("assets/silver_rank.png"),
+        "rank3": pygame.image.load("assets/bronze_rank.png"),
+        "no_rank": pygame.image.load("assets/no_rank.png"),
 }
 
 
@@ -152,32 +156,21 @@ class GameOver(Frame):
     def __init__(self, screen: pygame.surface.Surface, config, client):
         super().__init__(screen, config)
         self.client = client
-        self.score = 0
 
         # creating a var for the buttons' rect because it'll be needed when cheking if the mouse is on the button
         self.back_rect = assets["back"].get_rect()
-        self.back_rect.x, self.back_rect.y = (0 + self.back_rect.width // 2,
-                                              self.screen.get_height() - self.back_rect.height - 20)
+        self.back_rect.x, self.back_rect.y = (0, 0)
 
-        self.best_score = self.config.data["best_score"]
+        self.rank_displays = []
 
     def update(self):
-        self.best_score = max(self.best_score, self.score)
-        self.config.data["best_score"] = self.best_score
-
-        best_score_text = self.font.render(f"Best score : {self.best_score}", 1, self.config.data["colors"]["white"])
-        self.screen.blit(best_score_text, (self.screen.get_width() // 2 - best_score_text.get_width() // 2,
-                                           self.screen.get_height() // 2 - best_score_text.get_height() // 2))
-
-        score_text = self.font.render(f"Your score : {self.score}", 1, self.config.data["colors"]["white"])
-        self.screen.blit(score_text, (self.screen.get_width() // 2 - score_text.get_width() // 2,
-                                      3 * self.screen.get_height() // 4 - score_text.get_height() // 2))
+        for i in range(len(self.rank_displays)):
+            self.rank_displays[i].render()
 
         self.screen.blit(assets["back"], self.back_rect)
 
         self.screen.blit(assets["victory"],
-                         (self.screen.get_width() // 2 - assets["victory"].get_width() // 2,
-                          self.screen.get_height() // 4 - assets["victory"].get_height() // 4))
+                         (self.screen.get_width() // 2 - assets["victory"].get_width() // 2, 20))
 
     def handle_events(self, event: pygame.event.Event) -> str | None:
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -185,6 +178,51 @@ class GameOver(Frame):
                 return "welcome"
 
         return None
+
+    def create_rank_displays(self, results: list):
+        rank_displays = []
+        for i in range(len(results)):
+            if i + 1 <= self.config.data["max_rank_display"]:
+                rank_display = RankDisplay(self.screen, self.config, i + 1, list(results[i].keys())[0], list(results[i].values())[0],
+                                           (self.screen.get_width() // 2, self.config.data["offset_first_rank_display"] + self.config.data["space_rank_displays"] * i), "center")
+                self.rank_displays.append(rank_display)
+
+
+class RankDisplay:
+
+
+
+    def __init__(self, screen: pygame.surface.Surface, config: Config, rank: int, nickname: str, score: int,  pos:tuple, side:str="topleft"):
+        self.screen = screen
+        self.config = config
+        self.x_offset = self.config.data["offset_rank_nickname"]
+        self.font = pygame.font.SysFont(self.config.data["font_name"], self.config.data["font_size"])
+
+
+        self.rank = rank
+        self.nickname = nickname
+        self.score = score
+
+        if self.rank in range(1, 4):
+            key = "rank" + str(self.rank)
+
+        else:
+            key = "no_rank"
+        self.image = assets[key]
+        self.rect = self.image.get_rect()
+        setattr(self.rect, side, pos)
+
+    def render(self):
+        self.screen.blit(self.image, self.rect)
+
+        rank_text = self.font.render(str(self.rank), 1, self.config.data["colors"]["black"])
+        self.screen.blit(rank_text, (self.rect.x + self.x_offset, self.rect.y + self.rect.h // 2 - rank_text.get_height() // 2))
+
+        nickname_text = self.font.render(str(self.nickname), 1, self.config.data["colors"]["black"])
+        self.screen.blit(nickname_text, (self.rect.x + self.x_offset + rank_text.get_width() + 10, self.rect.y + self.rect.h // 2 - nickname_text.get_height() // 2))
+
+        score_text = self.font.render(str(self.score), 1, self.config.data["colors"]["black"])
+        self.screen.blit(score_text, (self.rect.x + self.rect.w - self.x_offset - score_text.get_width(), self.rect.y + self.rect.h // 2 - score_text.get_height() // 2))
 
 
 class Selector:

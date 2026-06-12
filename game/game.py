@@ -483,7 +483,7 @@ class Game:
     def check_game_over(self):
         # when a player won or lost
         if "GAME_OVER" in self.client.responses:
-            # we don't use win or lost because the player did neither of those, the game was stopped by another player
+            # we don't use win() or lose() because the player did neither of those, the game was stopped by another player
             self.over = True
 
 

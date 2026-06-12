@@ -89,6 +89,8 @@ class Server:
         status : if the originator won or lost
         """""
 
+        print(self.scores)
+
         # telling the clients that the game is over and getting the score of every player
         for client in self.clients:
             if self.clients[client]["in_game"]:
@@ -98,12 +100,13 @@ class Server:
         # waiting for the clients to answer
         while len(self.scores) < self.nb_players:
             pass
-        self.scores = sorted(self.scores, key=lambda x: x["score"], reverse=True)
+        self.scores = sorted(self.scores, key=lambda x: list(x.values())[0], reverse=True)
 
-        # we remove the originator
+        # we save the originator score and delete it from self.scores
         for score in self.scores:
-            if score.keys[0] == originator_key:
-                originator_score = score["score"]
+            if list(score.keys())[0] == originator_key:
+                originator_score = score[originator_key]
+                self.scores.remove(score)
                 break
 
         # if he lost, he is last one

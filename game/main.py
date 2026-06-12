@@ -69,14 +69,21 @@ else:
             if next_frame == game_over and active_frame == game:
                 print("Game Over 3")
 
+                # when the game is over and the server needs the score
+                client.send_request({"type": "POST", "name": "SCORE", "args": game.score})
+
                 if game.status is not None:
                     # sends a request to the server saying that the game is over
                     client.send_request({"type": "EVENT", "name": "GAME_OVER", "args": {"status" : game.status}})
 
-                # when the game is over and the server needs the score
-                client.send_request({"type": "POST", "name": "SCORE", "args": game.score})
-                game_over.score = game.score
+
                 game.reset()
+
+                # waits for the server to send the results
+                while "RESULTS" not in client.responses:
+                    pass
+                # creating the rank displays with the results
+                game_over.create_rank_displays(client.responses["RESULTS"])
 
             if next_frame == game and active_frame == welcome:
 
