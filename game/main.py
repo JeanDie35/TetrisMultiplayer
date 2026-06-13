@@ -1,15 +1,15 @@
 from game import Game
 from frames import Welcome, Settings, GameOver
-from config import Config
+from json_reader import JSONReader
 from client import Client
 import pygame
 pygame.init()
 pygame.font.init()
 
-config = Config()
+json_reader = JSONReader()
 
-FPS = config.data["FPS"]
-BG_COLOR = config.data["bg_color"]
+FPS = json_reader.config["FPS"]
+BG_COLOR = json_reader.config["bg_color"]
 
 clock = pygame.time.Clock()
 
@@ -26,11 +26,11 @@ Careful:
 
 running = True
 
-pygame.display.set_caption(config.data["title"])
-screen_size = (config.data["game_screen_width"], config.data["game_screen_height"])
+pygame.display.set_caption(json_reader.config["title"])
+screen_size = (json_reader.config["game_screen_width"], json_reader.config["game_screen_height"])
 screen = pygame.display.set_mode(screen_size)
 
-client = Client(config)
+client = Client(json_reader)
 
 # we try to connect to the server
 client_key = client.connect()
@@ -41,10 +41,10 @@ if client_key is None:
 
 else:
     # creating the frames
-    welcome = Welcome(screen, config, client)
-    game = Game(screen, config)
-    settings = Settings(screen, config)
-    game_over = GameOver(screen, config, client)
+    welcome = Welcome(screen, json_reader, client)
+    game = Game(screen, json_reader)
+    settings = Settings(screen, json_reader)
+    game_over = GameOver(screen, json_reader, client)
 
     active_frame = welcome
     next_frame = None
@@ -74,7 +74,7 @@ else:
 
                 if game.status is not None:
                     # sends a request to the server saying that the game is over
-                    client.send_request({"type": "EVENT", "name": "GAME_OVER", "args": {"status" : game.status}})
+                    client.send_request({"type": "EVENT", "name": "GAME_OVER", "args": game.status})
 
 
                 game.reset()
@@ -101,7 +101,7 @@ else:
 
             if event.type == pygame.QUIT:
                 # saving all the data
-                config.save_file()
+                json_reader.save_file()
                 # sending a request to the server saying that we want to close the conn
                 client.send_request({"type": "EVENT", "name": "CLOSE", "args": None})
                 pygame.quit()
@@ -120,7 +120,7 @@ else:
                 if active_frame == settings and next_frame == welcome:
                     # saving the chosen keys
                     for movement in game.key_binds:
-                        config.data["key_binds"][movement] = settings.get_key_movement(movement)
+                        json_reader.config["key_binds"][movement] = settings.get_key_movement(movement)
 
                 active_frame = next_frame
 

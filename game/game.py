@@ -1,7 +1,7 @@
 import numpy as np
 import pygame
 
-from config import Config
+from json_reader import JSONReader
 
 pygame.init()
 
@@ -48,9 +48,9 @@ blocks = {
 
 class ActivePiece:
 
-    def __init__(self, game, config, color):
+    def __init__(self, game, json_reader: JSONReader, color):
         self.color_value = int(color)
-        self.config = config
+        self.config = json_reader
         self.speed = 1
         self.state = 0
         self.array = blocks[self.color_value]["arrays"][self.state].copy()
@@ -133,19 +133,19 @@ class ActivePiece:
 
 class GameUI:
 
-    def __init__(self, screen: pygame.surface.Surface, config: Config, title, origin_x):
+    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, title, origin_x):
         self.screen = screen
-        self.config = config
+        self.json_reader = json_reader
 
         self.title = title
-        self.font = pygame.font.SysFont(self.config.data["font_name"], self.config.data["font_size"])
-        self.playing_screen_size = (self.config.data["playing_screen_width"], self.config.data["playing_screen_height"])
+        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
+        self.playing_screen_size = (self.json_reader.config["playing_screen_width"], self.json_reader.config["playing_screen_height"])
 
         # abscissa of the top right corner of the UI, we don't put the 
         self.origin_x = origin_x
 
     def is_fixed_block(self, coords: list | tuple, grid) -> bool:
-        return self.config.data["first_fixed_block"] <= grid[coords] <= self.config.data["last_fixed_block"]
+        return self.json_reader.config["first_fixed_block"] <= grid[coords] <= self.json_reader.config["last_fixed_block"]
 
     def render(self, grid, score, next_color, active_color=None):
 
@@ -156,11 +156,11 @@ class GameUI:
         self.display_score(score)
 
         # draw the blue line
-        pygame.draw.rect(self.screen, self.config.data["colors"]["blue"],
+        pygame.draw.rect(self.screen, self.json_reader.config["colors"]["blue"],
                          ((self.playing_screen_size[0] + self.origin_x, 0), (10, self.screen.get_height())))
 
-        pygame.draw.rect(self.screen, self.config.data["colors"]["blue"],
-                         ((self.config.data["game_screen_width"] + self.origin_x - 10, 0), (10, self.screen.get_height())))
+        pygame.draw.rect(self.screen, self.json_reader.config["colors"]["blue"],
+                         ((self.json_reader.config["game_screen_width"] + self.origin_x - 10, 0), (10, self.screen.get_height())))
 
     def display_grid(self, grid, active_color):
         # updating the blocks
@@ -177,12 +177,12 @@ class GameUI:
                                  (x * BLOCK_SIZE + self.origin_x, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
 
     def display_title(self):
-        title_text = self.font.render(self.title, 1, self.config.data["colors"]["white"])
-        self.screen.blit(title_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"] + self.origin_x, 10))
+        title_text = self.font.render(self.title, 1, self.json_reader.config["colors"]["white"])
+        self.screen.blit(title_text, (self.playing_screen_size[0] + self.json_reader.config["sidebar_offset"] + self.origin_x, 10))
 
     def display_next_block_text(self):
-        blocks_text = self.font.render("Next block:", 1, self.config.data["colors"]["white"])
-        self.screen.blit(blocks_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"] + self.origin_x, 40))
+        blocks_text = self.font.render("Next block:", 1, self.json_reader.config["colors"]["white"])
+        self.screen.blit(blocks_text, (self.playing_screen_size[0] + self.json_reader.config["sidebar_offset"] + self.origin_x, 40))
 
     def display_next_block(self, color):
         next_array = blocks[color]["arrays"][0]
@@ -191,31 +191,33 @@ class GameUI:
 
             for x in range(next_array.shape[1]):
 
-                if next_array[y, x] == self.config.data["moving_block"]:
+                if next_array[y, x] == self.json_reader.config["moving_block"]:
                     self.screen.blit(blocks[color]["image"], (
-                        self.playing_screen_size[0] + self.config.data["sidebar_offset"] + x * BLOCK_SIZE + self.origin_x,
+                        self.playing_screen_size[0] + self.json_reader.config["sidebar_offset"] + x * BLOCK_SIZE + self.origin_x,
                         100 + y * BLOCK_SIZE,
                         BLOCK_SIZE, BLOCK_SIZE))
 
     def display_score(self, score):
 
-        score_text = self.font.render(f"Score : {score}", 1, self.config.data["colors"]["white"])
-        self.screen.blit(score_text, (self.playing_screen_size[0] + self.config.data["sidebar_offset"] + self.origin_x, 200))
+        score_text = self.font.render(f"Score : {score}", 1, self.json_reader.config["colors"]["white"])
+        self.screen.blit(score_text, (self.playing_screen_size[0] + self.json_reader.config["sidebar_offset"] + self.origin_x, 200))
 
 
 
 class Game:
 
-    def __init__(self, screen: pygame.surface.Surface, config: Config):
+    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader):
         self.screen = screen
-        self.config = config
+        self.json_reader = json_reader
 
-        self.game_ui = {"you":GameUI(self.screen, self.config, "Your game", 0)}
+
+
+        self.game_ui = {"you":GameUI(self.screen, self.json_reader, "Your game", 0)}
 
         # server part
         self.client = None
 
-        self.playing_screen_size = (self.config.data["playing_screen_width"], self.config.data["playing_screen_height"])
+        self.playing_screen_size = (self.json_reader.config["playing_screen_width"], self.json_reader.config["playing_screen_height"])
         # creating the numpy array
         self.arr_size = (self.playing_screen_size[1] // BLOCK_SIZE, self.playing_screen_size[0] // BLOCK_SIZE)
         self.grid = np.zeros(self.arr_size)
@@ -223,7 +225,7 @@ class Game:
         self.line_broken = 0
         self.score = 0
         # var stores the normal speed, when k up isn't pressed
-        self.base_speed = self.config.data["base_speed"]
+        self.base_speed = self.json_reader.config["base_speed"]
 
         self.game_mode = None
 
@@ -233,7 +235,7 @@ class Game:
 
         self.counter = 0
 
-        self.key_binds = self.config.data["key_binds"]
+        self.key_binds = self.json_reader.config["key_binds"]
 
     def set_screen_size(self, size):
         self.screen = pygame.display.set_mode(size)
@@ -262,7 +264,7 @@ class Game:
         self.client.responses["GAME_STARTED"] = None
         print(f"Starting game with mode {self.game_mode}")
 
-        self.active_piece = ActivePiece(self, self.config, self.client.get_color())
+        self.active_piece = ActivePiece(self, self.json_reader, self.client.get_color())
         self.insert_blocks()
 
         self.next_color = self.client.get_color()
@@ -272,9 +274,9 @@ class Game:
         # if there's only 2 players playing
         if self.nb_players == 2:
             # we add another UI
-            self.game_ui["opponent"] = GameUI(self.screen, self.config, "Opponent's game", self.config.data["game_screen_width"])
+            self.game_ui["opponent"] = GameUI(self.screen, self.json_reader, "Opponent's game", self.json_reader.config["game_screen_width"])
             # resize the screen
-            self.set_screen_size((self.config.data["game_screen_width"] * 2, self.config.data["game_screen_height"]))
+            self.set_screen_size((self.json_reader.config["game_screen_width"] * 2, self.json_reader.config["game_screen_height"]))
 
     def insert_blocks(self):
         """""
@@ -283,14 +285,14 @@ class Game:
         y = self.active_piece.pos[0] + self.active_piece.array.shape[0]
         x = self.active_piece.pos[1] + self.active_piece.array.shape[1]
         # if there's grid put block where the blocks must generate
-        for color_value in range(self.config.data["first_fixed_block"], self.config.data["last_fixed_block"] + 1):
+        for color_value in range(self.json_reader.config["first_fixed_block"], self.json_reader.config["last_fixed_block"] + 1):
             if color_value in self.grid[self.active_piece.pos[0]:y, self.active_piece.pos[1]:x]:
                 print("Game over 1")
                 self.lose()
         self.grid[self.active_piece.pos[0]:y, self.active_piece.pos[1]:x] = self.active_piece.array
 
     def is_fixed_block(self, coords: list | tuple) -> bool:
-        return self.config.data["first_fixed_block"] <= self.grid[coords] <= self.config.data["last_fixed_block"]
+        return self.json_reader.config["first_fixed_block"] <= self.grid[coords] <= self.json_reader.config["last_fixed_block"]
 
     def reset(self):
         """""
@@ -305,7 +307,7 @@ class Game:
         self.grid = np.zeros(self.arr_size)
 
         # reset the screen's size
-        self.set_screen_size((self.config.data["game_screen_width"], self.config.data["game_screen_height"]))
+        self.set_screen_size((self.json_reader.config["game_screen_width"], self.json_reader.config["game_screen_height"]))
 
     def move_line_down(self, y: int):
         """""
@@ -316,7 +318,7 @@ class Game:
             if y - i != 0:
                 self.grid[y - i, :] = self.grid[y - i - 1, :]
             else:
-                self.grid[y - i, :] = self.config.data["empty"]
+                self.grid[y - i, :] = self.json_reader.config["empty"]
 
     def handle_events(self, event):
 
@@ -330,7 +332,7 @@ class Game:
                 self.arr_size = (self.playing_screen_size[1] // BLOCK_SIZE, self.playing_screen_size[0] // BLOCK_SIZE)
                 self.grid = np.zeros(self.arr_size)
 
-                self.active_piece = ActivePiece(self, self.config, self.client.get_color())
+                self.active_piece = ActivePiece(self, self.json_reader, self.client.get_color())
                 self.insert_blocks()
 
             if event.key == self.key_binds["turn right"] or event.key == self.key_binds["turn left"]:
@@ -396,7 +398,7 @@ class Game:
         # checks if grid line of grid is only made of 2s, if so we move all the lines higher than this line down
         for i in range(self.grid.shape[0]):
 
-            if not self.config.data["empty"] in self.grid[i, :] and not self.config.data["moving_block"] in self.grid[i, :]:
+            if not self.json_reader.config["empty"] in self.grid[i, :] and not self.json_reader.config["moving_block"] in self.grid[i, :]:
 
                 if self.game_mode == "No line broken":
                     self.lose()
@@ -404,7 +406,7 @@ class Game:
                 else:
                     self.line_broken += 1
                     lines_in_a_row += 1
-                    self.increase_score(self.config.data["score_per_line"] * lines_in_a_row)
+                    self.increase_score(self.json_reader.config["score_per_line"] * lines_in_a_row)
                     self.move_line_down(i)
 
                     if self.line_broken % 10 == 0:
@@ -414,7 +416,7 @@ class Game:
         """""
         makes the moving blocks fall
         """""
-        if self.counter % int(self.config.data["fall_tick_rate"] / self.active_piece.speed) == 0:
+        if self.counter % int(self.json_reader.config["fall_tick_rate"] / self.active_piece.speed) == 0:
 
             # getting the coords of the blocks before moving them
             self.active_piece.coords = self.active_piece.get_coords(self.grid, True)
@@ -426,7 +428,7 @@ class Game:
                 self.spawn_new_blocks()
                 # if the game is over, we don't add the points
                 if not self.over:
-                    self.increase_score(self.config.data["score_per_block"])
+                    self.increase_score(self.json_reader.config["score_per_block"])
 
         self.counter += 1
 
@@ -436,7 +438,7 @@ class Game:
             self.grid[co[0], co[1]] = self.active_piece.color_value
 
         # else, we create new blocks
-        self.active_piece = ActivePiece(self, self.config, self.next_color)
+        self.active_piece = ActivePiece(self, self.json_reader, self.next_color)
 
         self.insert_blocks()
         self.next_color = self.client.get_color()
@@ -463,7 +465,7 @@ class Game:
 
     def render(self):
         # we fill the entire screen with black so we can recreate the whole ui
-        self.screen.fill(self.config.data["bg_color"])
+        self.screen.fill(self.json_reader.config["bg_color"])
 
         self.game_ui["you"].render(self.grid, self.score, self.next_color,
                                        active_color=self.active_piece.color_value)

@@ -1,6 +1,6 @@
 import pygame
 
-from config import Config
+from json_reader import JSONReader
 
 pygame.init()
 
@@ -29,10 +29,10 @@ assets = {
 # parent class for all the different frames there's
 class Frame:
 
-    def __init__(self, screen: pygame.surface.Surface, config):
+    def __init__(self, screen: pygame.surface.Surface,json_reader):
         self.screen = screen
-        self.config = config
-        self.font = pygame.font.SysFont(config.data["font_name"], config.data["font_size"])
+        self.json_reader =json_reader
+        self.font = pygame.font.SysFont(json_reader.config["font_name"],json_reader.config["font_size"])
 
     def update(self):
         return None
@@ -45,8 +45,8 @@ class Frame:
 # thr frame that will be displayed when you launch the app
 class Welcome(Frame):
 
-    def __init__(self, screen: pygame.surface.Surface, config, client):
-        super().__init__(screen, config)
+    def __init__(self, screen: pygame.surface.Surface, json_reader, client):
+        super().__init__(screen, json_reader)
 
         self.client = client
 
@@ -58,7 +58,7 @@ class Welcome(Frame):
         self.settings_rect = assets["settings"].get_rect()
         self.settings_rect.x, self.settings_rect.y = (0, 0)
 
-        self.mode_selector = Selector(self.screen, self.config, (200, 50), self.config.data['game_modes'],
+        self.mode_selector = Selector(self.screen, self.json_reader, (200, 50), self.json_reader.config['game_modes'],
                                       (self.screen.get_width() // 2, 5 * self.screen.get_height() // 6), "center")
 
     def update(self):
@@ -85,7 +85,7 @@ class Welcome(Frame):
 
             elif self.play_rect.collidepoint(event.pos):
                 # if the user tries to start the game, we don't change the active frame, but we send a request to the server
-                self.client.send_request({"type": "EVENT", "name": "START", "args": {"mode" : self.mode_selector.get_selected_text()}})
+                self.client.send_request({"type": "EVENT", "name": "START", "args": self.mode_selector.get_selected_text()})
 
         return None
 
@@ -93,21 +93,23 @@ class Welcome(Frame):
 # the frame where you can change the key binds
 class Settings(Frame):
 
-    def __init__(self, screen: pygame.surface.Surface, config):
-        super().__init__(screen, config)
+    def __init__(self, screen: pygame.surface.Surface, json_reader):
+        super().__init__(screen, json_reader)
 
         # creating a var for the buttons' rect because it'll be needed when cheking if the mouse is on the button
         self.back_rect = assets["back"].get_rect()
         self.back_rect.x, self.back_rect.y = (0, 0)
 
+
         # creating a dict to store all the key selectors depending on what key are they bound to
-        self.key_selectors = {
-            "right": KeySelector(self.screen, config.data["key_binds"]["right"], 65, self.config),
-            "left": KeySelector(self.screen, config.data["key_binds"]["left"], 155, self.config),
-            "turn right": KeySelector(self.screen, config.data["key_binds"]["turn right"], 245, self.config),
-            "turn left": KeySelector(self.screen, config.data["key_binds"]["turn left"], 335, self.config),
-            "speed up": KeySelector(self.screen, config.data["key_binds"]["speed up"], 425, self.config)
-        }
+        self.key_selectors = {}
+        for i in range(len(self.json_reader.config["key_binds"])):
+            movement = list(self.json_reader.config["key_binds"].keys())[i]
+            self.key_selectors[movement] = KeySelector(self.screen, json_reader.config["key_binds"][movement],
+                                                       self.json_reader.config["offset_first_key_selector"] + i * self.json_reader.config["offset_key_selector"] + self.json_reader.config["space_text_key_selector"], self.json_reader)
+
+
+
 
     def update(self):
         self.screen.blit(assets["back"], self.back_rect)
@@ -115,8 +117,8 @@ class Settings(Frame):
         # for each key selector
         for i in range(len(list(self.key_selectors.keys()))):
             # we display grid text saying what movement is the key selector bound to
-            key_text = self.font.render(list(self.key_selectors.keys())[i], 1, self.config.data["colors"]["white"])
-            self.screen.blit(key_text, (self.screen.get_width() // 2 - key_text.get_width() // 2, 20 + i * 90))
+            key_text = self.font.render(list(self.key_selectors.keys())[i], 1, self.json_reader.config["colors"]["white"])
+            self.screen.blit(key_text, (self.screen.get_width() // 2 - key_text.get_width() // 2, self.json_reader.config["offset_first_key_selector"] + i * self.json_reader.config["offset_key_selector"]))
 
             # displays the key selctor
             self.key_selectors[list(self.key_selectors.keys())[i]].render()
@@ -153,8 +155,8 @@ class Settings(Frame):
 # frame when the game is over
 class GameOver(Frame):
 
-    def __init__(self, screen: pygame.surface.Surface, config, client):
-        super().__init__(screen, config)
+    def __init__(self, screen: pygame.surface.Surface, json_reader, client):
+        super().__init__(screen, json_reader)
         self.client = client
 
         # creating a var for the buttons' rect because it'll be needed when cheking if the mouse is on the button
@@ -182,9 +184,9 @@ class GameOver(Frame):
     def create_rank_displays(self, results: list):
         rank_displays = []
         for i in range(len(results)):
-            if i + 1 <= self.config.data["max_rank_display"]:
-                rank_display = RankDisplay(self.screen, self.config, i + 1, list(results[i].keys())[0], list(results[i].values())[0],
-                                           (self.screen.get_width() // 2, self.config.data["offset_first_rank_display"] + self.config.data["space_rank_displays"] * i), "center")
+            if i + 1 <= self.json_reader.config["max_rank_display"]:
+                rank_display = RankDisplay(self.screen, self.json_reader, i + 1, list(results[i].keys())[0], list(results[i].values())[0],
+                                           (self.screen.get_width() // 2, self.json_reader.config["offset_first_rank_display"] + self.json_reader.config["space_rank_displays"] * i), "center")
                 self.rank_displays.append(rank_display)
 
 
@@ -192,11 +194,11 @@ class RankDisplay:
 
 
 
-    def __init__(self, screen: pygame.surface.Surface, config: Config, rank: int, nickname: str, score: int,  pos:tuple, side:str="topleft"):
+    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, rank: int, nickname: str, score: int,  pos:tuple, side:str="topleft"):
         self.screen = screen
-        self.config = config
-        self.x_offset = self.config.data["offset_rank_nickname"]
-        self.font = pygame.font.SysFont(self.config.data["font_name"], self.config.data["font_size"])
+        self.json_reader = json_reader
+        self.x_offset = self.json_reader.config["offset_rank_nickname"]
+        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
 
 
         self.rank = rank
@@ -215,22 +217,22 @@ class RankDisplay:
     def render(self):
         self.screen.blit(self.image, self.rect)
 
-        rank_text = self.font.render(str(self.rank), 1, self.config.data["colors"]["black"])
+        rank_text = self.font.render(str(self.rank), 1, self.json_reader.config["colors"]["black"])
         self.screen.blit(rank_text, (self.rect.x + self.x_offset, self.rect.y + self.rect.h // 2 - rank_text.get_height() // 2))
 
-        nickname_text = self.font.render(str(self.nickname), 1, self.config.data["colors"]["black"])
+        nickname_text = self.font.render(str(self.nickname), 1, self.json_reader.config["colors"]["black"])
         self.screen.blit(nickname_text, (self.rect.x + self.x_offset + rank_text.get_width() + 10, self.rect.y + self.rect.h // 2 - nickname_text.get_height() // 2))
 
-        score_text = self.font.render(str(self.score), 1, self.config.data["colors"]["black"])
+        score_text = self.font.render(str(self.score), 1, self.json_reader.config["colors"]["black"])
         self.screen.blit(score_text, (self.rect.x + self.rect.w - self.x_offset - score_text.get_width(), self.rect.y + self.rect.h // 2 - score_text.get_height() // 2))
 
 
 class Selector:
 
-    def __init__(self, screen: pygame.surface.Surface, config: Config, size: tuple, iter: list, pos: tuple, side:str="topleft"):
+    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, size: tuple, iter: list, pos: tuple, side:str="topleft"):
         self.screen = screen
-        self.config = config
-        self.font = pygame.font.SysFont(self.config.data["font_name"], self.config.data["font_size"])
+        self.json_reader = json_reader
+        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
 
         self.rect = pygame.rect.Rect(pos, size)
         setattr(self.rect, side, pos)
@@ -247,9 +249,9 @@ class Selector:
 
     def render(self):
 
-        pygame.draw.rect(self.screen, self.config.data["colors"]["dark_grey"], self.rect)
+        pygame.draw.rect(self.screen, self.json_reader.config["colors"]["dark_grey"], self.rect)
 
-        text = self.font.render(self.list[self.counter], 1, self.config.data["colors"]["white"])
+        text = self.font.render(self.list[self.counter], 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(text, (self.rect.x + self.rect.w // 2 - text.get_width() // 2,
                                     self.rect.y + self.rect.h // 2 - text.get_height() // 2))
 
@@ -261,10 +263,10 @@ class Selector:
 
 class KeySelector:
 
-    def __init__(self, screen: pygame.surface.Surface,  nkey: int, y: int, config):
+    def __init__(self, screen: pygame.surface.Surface,  nkey: int, y: int, json_reader):
         self.screen = screen
-        self.config = config
-        self.font = pygame.font.SysFont(self.config.data["font_name"], self.config.data["font_size"])
+        self.json_reader = json_reader
+        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
 
         # the key that it is displaying
         self.nkey = nkey
@@ -277,9 +279,9 @@ class KeySelector:
         displays the key_selector at its position
         """""
 
-        pygame.draw.rect(self.screen, self.config.data["colors"]["grey"], self.rect)
+        pygame.draw.rect(self.screen, self.json_reader.config["colors"]["grey"], self.rect)
 
-        key_text = self.font.render(self.get_key(self.nkey), 1, self.config.data["colors"]["white"])
+        key_text = self.font.render(self.get_key(self.nkey), 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(key_text, (self.rect.x + self.rect.w // 2 - key_text.get_width() // 2,
                                     self.rect.y + self.rect.h // 2 - key_text.get_height() // 2))
 
@@ -299,7 +301,7 @@ class KeySelector:
         """""
         if nkey in special_keys:
             return special_keys[nkey]
-        elif nkey in range(self.config.data["first_accepted_letter"], self.config.data["last_accepted_letter"] + 1):
+        elif nkey in range(self.json_reader.config["first_accepted_letter"], self.json_reader.config["last_accepted_letter"] + 1):
             return chr(nkey)
 
         return None

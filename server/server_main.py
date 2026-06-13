@@ -3,10 +3,10 @@ import threading
 import random
 import secrets
 
-from config import Config
+from json_reader import JSONReader
 from tools import decode, encode, recv_nb_bytes
 
-config = Config()
+json_reader = JSONReader()
 
 
 class Server:
@@ -16,7 +16,7 @@ class Server:
 
     def __init__(self):
         self.server_ip = self.get_ip_address()  # server hostname or IP address
-        self.port = config.data["port"]  # server port number
+        self.port = json_reader.config["port"]  # server port number
         # list of random numbers to send to the clients to know what is the next block
         self.blocks = [self.get_random_number()]
 
@@ -37,7 +37,7 @@ class Server:
 
         data = encode(response)
         # transform the reseponse size in four bytes
-        size = len(data).to_bytes(config.data["header_size"], byteorder="big")
+        size = len(data).to_bytes(json_reader.config["header_size"], byteorder="big")
 
 
         # sending messages with the size of the data in front
@@ -56,7 +56,7 @@ class Server:
         self.end_game(client_key)
         self.clients[client_key]["online"] = False
         print(f"Closing connection with client : {client_key}")
-        self.send_message(client_key, {"name": "CLOSED", "args": None})
+        self.send_message(client_key, {"type": "RESPONSE", "name": "CLOSED", "args": None})
 
     def start_game(self, mode):
         if not self.in_game:
@@ -64,7 +64,7 @@ class Server:
 
                 # checks if the client is online
                 if self.clients[client]["online"]:
-                    self.send_message(client, {"name": "GAME_STARTED", "args": mode})
+                    self.send_message(client, {"type": "RESPONSE", "name": "GAME_STARTED", "args": mode})
                     self.clients[client]["in_game"] = True
 
         self.nb_players = self.get_nb_players()
@@ -94,7 +94,7 @@ class Server:
         # telling the clients that the game is over and getting the score of every player
         for client in self.clients:
             if self.clients[client]["in_game"]:
-                self.send_message(client, {"name": "GAME_OVER", "args": None})
+                self.send_message(client, {"type": "GET", "name": "GAME_OVER", "args": None})
 
         self.nb_players = self.get_nb_players()
         # waiting for the clients to answer
@@ -120,7 +120,7 @@ class Server:
         # send the results to the client and end the game
         for client in self.clients:
             if self.clients[client]["in_game"]:
-                self.send_message(client, {"name": "RESULTS", "args": self.scores})
+                self.send_message(client, {"type": "RESPONSE", "name": "RESULTS", "args": self.scores})
                 self.end_game(client)
 
 
@@ -166,7 +166,7 @@ class Server:
             try:
                 while True:
                     # getting the size of the request which is stored in 4 bytes in front of the request itself
-                    request_size = recv_nb_bytes(self.clients[key]["socket"], config.data["header_size"])
+                    request_size = recv_nb_bytes(self.clients[key]["socket"], json_reader.config["header_size"])
                     # transforming bytes to int
                     request_size = int.from_bytes(request_size, byteorder="big")
 
@@ -182,10 +182,10 @@ class Server:
                             break
 
                         elif request["name"] == "START":
-                            self.start_game(request["args"]["mode"])
+                            self.start_game(request["args"])
 
                         elif request["name"] == "GAME_OVER":
-                            self.game_over(key, request["args"]["status"])
+                            self.game_over(key, request["args"])
 
                     # if the user wants to transfer data to the other players
                     elif request["type"] == "TRANSFER":
@@ -199,7 +199,7 @@ class Server:
 
                         elif request["name"] == "NB_PLAYERS":
                             self.nb_players = self.get_nb_players()
-                            self.send_message(key, {"name": "NB_PLAYERS", "args": self.nb_players})
+                            self.send_message(key, {"type": "RESPONSE", "name": "NB_PLAYERS", "args": self.nb_players})
 
                     elif request["type"] == "POST":
 
@@ -241,7 +241,7 @@ class Server:
     ################################
 
     def get_random_number(self):
-        return random.randint(config.data["first_fixed_block"], config.data["last_fixed_block"])
+        return random.randint(json_reader.config["first_fixed_block"], json_reader.config["last_fixed_block"])
 
     def next_block(self, key):
         self.clients[key]["block"] += 1
@@ -251,7 +251,7 @@ class Server:
 
         # sends the new number to the client
         block = self.blocks[self.clients[key]["block"]]
-        self.send_message(key, {"name": "NEXT_BLOCK", "args": block})
+        self.send_message(key, {"type": "RESPONSE", "name": "NEXT_BLOCK", "args": block})
 
     def send_data(self, key, data_name, data):
 
@@ -260,7 +260,7 @@ class Server:
         opponent = [client for client in self.clients if client != key and self.clients[client]["in_game"]]
 
         if opponent != []:
-            self.send_message(opponent[0], {"name": data_name.upper(), "args": data})
+            self.send_message(opponent[0], {"type": "RESPONSE", "name": data_name.upper(), "args": data})
 
 
 

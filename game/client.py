@@ -5,13 +5,13 @@ from tools import decode, encode, recv_nb_bytes
 # handles the connection with the server
 class Client:
 
-    def __init__(self, config, key=" "):
-        self.config = config
+    def __init__(self, json_reader, key=" "):
+        self.json_reader = json_reader
 
         # create a socket object
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_ip = self.config.data["server_ip"]  # replace with the server's IP address
-        self.server_port = self.config.data["port"]  # replace with the server's port number
+        self.server_ip = self.json_reader.config["server_ip"]  # replace with the server's IP address
+        self.server_port = self.json_reader.config["port"]  # replace with the server's port number
         self.key = key
 
         # dict to store the server's responses depending on the name of the response
@@ -58,7 +58,7 @@ class Client:
         while True:
 
             # getting the size of the request which is stored in 4 bytes in front of the request itself
-            response_size = recv_nb_bytes(self.socket, self.config.data["header_size"])
+            response_size = recv_nb_bytes(self.socket, self.json_reader.config["header_size"])
             # transforming bytes to int
             response_size = int.from_bytes(response_size, byteorder="big")
 
@@ -87,7 +87,7 @@ class Client:
 
         data = encode(request)
         # transform the size in four bytes
-        size = len(data).to_bytes(self.config.data["header_size"], byteorder="big")
+        size = len(data).to_bytes(self.json_reader.config["header_size"], byteorder="big")
 
         # sending messages with the size of the data in front
         self.socket.sendall(size + data)
