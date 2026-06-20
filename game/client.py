@@ -68,7 +68,7 @@ class Client:
             # store the response's arguments in self.responses
             self.responses[response["name"]] = response["args"]
 
-            print(f"Received : {response}")
+            print(f"Received from server : request {response["type"]} with name {response["name"]} with args {response["args"]} ")
 
             if response["name"] == "CLOSED":
                 self.close_conn()
@@ -77,7 +77,7 @@ class Client:
 
     def send_request(self, request: dict):
 
-        print(f"Sent : {request}")
+        print(f"Sent request {request["type"]} with name {request['name']} with args {request['args']}")
 
         # delete the old value so we can know when the new value has arrived
         # only works for GET request because the others don't expect a response
@@ -98,7 +98,6 @@ class Client:
         # waits for the server to answer
         while not "NEXT_BLOCK" in self.responses or self.responses["NEXT_BLOCK"] is None :
             pass
-        print(self.responses)
         return self.responses["NEXT_BLOCK"]
 
     def get_nb_players(self):

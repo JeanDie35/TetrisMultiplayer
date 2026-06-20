@@ -22,7 +22,9 @@ class Server:
 
         self.in_game = False
         self.nb_players = 0
-        self.scores = []
+
+        self.scores = [] # scores isn't a dict because we need to be able to add a client at the end or the beginning
+        self.names = {}
 
 
     def get_ip_address(self) -> str:
@@ -33,7 +35,7 @@ class Server:
 
     def send_message(self, key, response: dict):
 
-        print(f"Sent : {response}")
+        print(f"Sent request {response["type"]} with name {response['name']} with args {response['args']}")
 
         data = encode(response)
         # transform the reseponse size in four bytes
@@ -89,7 +91,6 @@ class Server:
         status : if the originator won or lost
         """""
 
-        print(self.scores)
 
         # telling the clients that the game is over and getting the score of every player
         for client in self.clients:
@@ -97,7 +98,7 @@ class Server:
                 self.send_message(client, {"type": "GET", "name": "GAME_OVER", "args": None})
 
         self.nb_players = self.get_nb_players()
-        # waiting for the clients to answer
+        # waiting for the clients to send their scores and names
         while len(self.scores) < self.nb_players:
             pass
         self.scores = sorted(self.scores, key=lambda x: list(x.values())[0], reverse=True)
@@ -117,11 +118,21 @@ class Server:
         elif status == "WON":
             self.scores.insert(0, {originator_key: originator_score})
 
+        # we change the keys in score by the names
+        for i in range(len(self.scores)):
+            client_name = self.names[list(self.scores[i].keys())[0]]
+            self.scores.append({client_name : list(self.scores[i].values())[0]})
+            # we delete the old version
+            self.scores.pop(i)
+
         # send the results to the client and end the game
         for client in self.clients:
             if self.clients[client]["in_game"]:
                 self.send_message(client, {"type": "RESPONSE", "name": "RESULTS", "args": self.scores})
                 self.end_game(client)
+
+        # clears the scores for the next game
+        self.scores = []
 
 
     def get_key(self, client_socket: socket.socket) -> str | None:
@@ -173,7 +184,7 @@ class Server:
 
                     # receive the message, knowing the size allow us to make sure the request doesn't mix with other
                     request = decode(recv_nb_bytes(self.clients[key]["socket"], request_size))
-                    print(f"Received from {key}: {request}")
+                    print(f"Received from {key}: request {request["type"]} with name {request["name"]} with args {request["args"]} ")
 
                     # when the user sends a request to change a state
                     if request["type"] == "EVENT":
@@ -208,7 +219,6 @@ class Server:
                                 del json_reader.profiles[profile_key]
                                 self.send_data(key, "PROFILES", json_reader.profiles, request["receivers"])
                                 # saves the profiles
-                                print(json_reader.profiles)
                                 json_reader.save_profiles()
 
                         elif request["name"] == "CHANGE_PROFILE":
@@ -240,9 +250,8 @@ class Server:
                         if request["name"] == "SCORE":
                             self.scores.append({key: request['args']})
 
-
-            except Exception as e:
-                print(e)
+                        if request["name"] == "NAME":
+                            self.names[key] = request['args']
 
             finally:
                 self.clients[key]["online"] = False

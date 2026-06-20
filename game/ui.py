@@ -105,7 +105,7 @@ class Entry:
         elif event.type == pygame.KEYDOWN and self.selected:
             new_str = None
             keys = pygame.key.get_pressed()
-            # formulas to konow if the shift key or the capslock key are on.
+            # formulas to know if the shift key or the capslock key are on.
             maj_pressed = (pygame.key.get_mods() & pygame.KMOD_SHIFT) or (pygame.key.get_mods() & pygame.KMOD_CAPS)
 
             if event.key in range(self.json_reader.config["first_accepted_letter"], self.json_reader.config["last_accepted_letter"] + 1):

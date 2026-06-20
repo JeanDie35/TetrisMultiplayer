@@ -485,10 +485,11 @@ class Game:
                     self.game_ui["opponent"].render(grid, score, next_color)
 
     def check_game_over(self):
-        # when a player won or lost
-        if "GAME_OVER" in self.client.responses:
+        # when a player in the current game won or lost
+        if "GAME_OVER" in self.client.responses and self.client.responses["GAME_OVER"] is not None:
             # we don't use win() or lose() because the player did neither of those, the game was stopped by another player
             self.over = True
+            self.client.responses["GAME_OVER"] = None
 
 
     def update(self):

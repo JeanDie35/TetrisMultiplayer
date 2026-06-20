@@ -148,7 +148,7 @@ class Settings(Frame):
                 return "welcome"
 
             if self.add_rect.collidepoint(event.pos):
-                if self.profile_entry != "":
+                if self.profile_entry != "" and self.profile_entry.str not in self.profiles:
                     # we add a profile with the text in the entry
                     self.add_profile(self.profile_entry.str)
                     # clears the entry
