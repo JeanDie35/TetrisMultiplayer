@@ -22,6 +22,15 @@
     "score_per_line": 5,
     "best_score": 202,
     "FPS": 60,
+    "offset_profile_name": 20,
+    "offset_delete_button": 20,
+    "space_delete_button_modify_button": 15,
+    "space_modify_button_choose_button": 15,
+    "offset_profile_entry": 50,
+    "offset_add_profile_button": 30,
+    "offset_profile_text": 20,
+    "offset_first_profile_widget": 200,
+    "space_profile_widgets": 5,
     "max_rank_display": 10,
     "offset_rank_nickname": 10,
     "offset_first_rank_display": 200,
@@ -29,15 +38,9 @@
     "offset_first_key_selector": 140,
     "offset_key_selector": 90,
     "space_text_key_selector": 40,
+    "nb_lowercase_to_uppercase": 32,
     "first_accepted_letter": 97,
     "last_accepted_letter": 122,
-    "key_binds": {
-        "right": 100,
-        "left": 113,
-        "speed up": 115,
-        "turn right": 1073741903,
-        "turn left": 1073741904
-    },
     "colors": {
         "black": [
             0,

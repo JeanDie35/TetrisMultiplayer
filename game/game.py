@@ -235,7 +235,7 @@ class Game:
 
         self.counter = 0
 
-        self.key_binds = self.json_reader.config["key_binds"]
+        self.key_binds = {}
 
     def set_screen_size(self, size):
         self.screen = pygame.display.set_mode(size)
@@ -256,7 +256,7 @@ class Game:
         self.over = True
         self.status = "WON"
 
-    def start_game(self, client):
+    def start_game(self, client, key_binds: dict):
         # when starting the game, we need a client to communicate with the server
         self.client = client
         self.game_mode = self.client.responses["GAME_STARTED"]
@@ -270,6 +270,8 @@ class Game:
         self.next_color = self.client.get_color()
 
         self.nb_players = self.client.get_nb_players()
+
+        self.key_binds = key_binds
 
         # if there's only 2 players playing
         if self.nb_players == 2:
@@ -456,11 +458,11 @@ class Game:
             grid[grid==1] = self.active_piece.color_value
             # transform the grid into a list of int
             grid = grid.astype(int).tolist()
-            self.client.send_request({"type": "TRANSFER", "name": "OPPONENT_GRID", "args": grid})
+            self.client.send_request({"type": "TRANSFER", "name": "OPPONENT_GRID", "receivers" : "opponents", "args": grid})
 
-            self.client.send_request({"type": "TRANSFER", "name": "OPPONENT_SCORE", "args": self.score})
+            self.client.send_request({"type": "TRANSFER", "name": "OPPONENT_SCORE", "receivers" : "opponents", "args": self.score})
 
-            self.client.send_request({"type": "TRANSFER", "name": "OPPONENT_NEXT_COLOR", "args": self.next_color})
+            self.client.send_request({"type": "TRANSFER", "name": "OPPONENT_NEXT_COLOR", "receivers" : "opponents", "args": self.next_color})
 
 
     def render(self):

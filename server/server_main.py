@@ -127,6 +127,7 @@ class Server:
     def get_key(self, client_socket: socket.socket) -> str | None:
         # receives the key that the client sent
         client_key = decode(client_socket.recv(1024))
+
         try:
             # if the game is already launched, we don't accept any connections
             if not self.in_game:
@@ -189,7 +190,36 @@ class Server:
 
                     # if the user wants to transfer data to the other players
                     elif request["type"] == "TRANSFER":
-                            self.send_data(key, request["name"], request["args"])
+
+                        # every time the profiles are changed, we send them to players
+                        if request["name"] == "ADD_PROFILE":
+                            profile_name = request["args"]
+                            # if the profile name isn't already used
+                            if not profile_name in json_reader.profiles:
+                                self.create_new_profile(profile_name)
+                                self.send_data(key, "PROFILES", json_reader.profiles, request["receivers"])
+                                # saves the profiles
+                                json_reader.save_profiles()
+
+                        elif request["name"] == "DELETE_PROFILE":
+                            profile_key = request["args"]
+                            if profile_key in json_reader.profiles:
+                                # we delete the profiles
+                                del json_reader.profiles[profile_key]
+                                self.send_data(key, "PROFILES", json_reader.profiles, request["receivers"])
+                                # saves the profiles
+                                print(json_reader.profiles)
+                                json_reader.save_profiles()
+
+                        elif request["name"] == "CHANGE_PROFILE":
+                            json_reader.profiles[request["args"]["key"]] = request["args"]["profile"]
+                            self.send_data(key, "PROFILES", json_reader.profiles, request["receivers"])
+                            # saves the profiles
+                            json_reader.save_profiles()
+
+                        # for other requests
+                        else:
+                            self.send_data(key, request["name"], request["args"], request["receivers"])
 
                     # when the user sends a request and waits for a value
                     elif request["type"] == "GET":
@@ -201,10 +231,18 @@ class Server:
                             self.nb_players = self.get_nb_players()
                             self.send_message(key, {"type": "RESPONSE", "name": "NB_PLAYERS", "args": self.nb_players})
 
+                        # used at the beginning so that the client can get the profiles, event if they weren't changed
+                        elif request["name"] == "PROFILES":
+                            self.send_message(key, {"type": "RESPONSE", "name": "PROFILES", "args": json_reader.profiles})
+
                     elif request["type"] == "POST":
 
                         if request["name"] == "SCORE":
                             self.scores.append({key: request['args']})
+
+
+            except Exception as e:
+                print(e)
 
             finally:
                 self.clients[key]["online"] = False
@@ -215,6 +253,12 @@ class Server:
     def run(self):
         # create a socket object
         try:
+
+            # gets the profiles
+            # if no profile was created, we create a built-in profile
+            if json_reader.profiles == {}:
+                self.create_new_profile("John Doe")
+
             server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # bind the socket to the host and port
             server.bind((self.server_ip, self.port))
@@ -253,16 +297,32 @@ class Server:
         block = self.blocks[self.clients[key]["block"]]
         self.send_message(key, {"type": "RESPONSE", "name": "NEXT_BLOCK", "args": block})
 
-    def send_data(self, key, data_name, data):
+    def send_data(self, key, data_name, data, receivers):
 
-        # get the opponent's key
-        # the opponent must be in game
-        opponent = [client for client in self.clients if client != key and self.clients[client]["in_game"]]
+        if receivers == "opponents":
+            receivers = [client for client in self.clients if client != key and self.clients[client]["online"]]
 
-        if opponent != []:
-            self.send_message(opponent[0], {"type": "RESPONSE", "name": data_name.upper(), "args": data})
+        elif receivers == "all":
+            receivers = [client for client in self.clients if self.clients[client]["online"]]
 
+        for receiver in receivers:
+            self.send_message(receiver, {"type": "RESPONSE", "name": data_name.upper(), "args": data})
 
+    def create_new_profile(self, name):
+        json_reader.profiles[self.generate_key()] = self.get_base_profile(name)
+
+    def get_base_profile(self, name: str) -> dict:
+        return {"name": name,
+                "best_score": 0,
+                "key_binds": {
+                    "right": 100,
+                    "left": 113,
+                    "speed up": 115,
+                    "turn right": 1073741903,
+                    "turn left": 1073741904
+                    }
+
+                }
 
 
 server = Server()

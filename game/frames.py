@@ -1,30 +1,8 @@
 import pygame
-
 from json_reader import JSONReader
+from ui import RankDisplay, Entry, Selector, KeySelector, assets, ProfileWidget
 
 pygame.init()
-
-# all the keys that can't work with chr() or ord() function but we still want to be able to bind them
-special_keys = {
-    pygame.K_RIGHT: "right arrow",
-    pygame.K_LEFT: "left arrow",
-    pygame.K_UP: "up arrow",
-    pygame.K_DOWN: "down arrow"
-}
-
-assets = {
-        "logo": pygame.image.load("assets/logo.png"),
-        "play": pygame.image.load("assets/play_button.png"),
-        "settings": pygame.image.load("assets/settings_button.png"),
-        "back": pygame.image.load("assets/back_button.png"),
-        "victory": pygame.image.load("assets/victory.png"),
-        "connection": pygame.image.load("assets/connection_button.png"),
-        "rank1": pygame.image.load("assets/gold_rank.png"),
-        "rank2": pygame.image.load("assets/silver_rank.png"),
-        "rank3": pygame.image.load("assets/bronze_rank.png"),
-        "no_rank": pygame.image.load("assets/no_rank.png"),
-}
-
 
 # parent class for all the different frames there's
 class Frame:
@@ -93,41 +71,155 @@ class Welcome(Frame):
 # the frame where you can change the key binds
 class Settings(Frame):
 
-    def __init__(self, screen: pygame.surface.Surface, json_reader):
+    def __init__(self, screen: pygame.surface.Surface, json_reader, client):
         super().__init__(screen, json_reader)
+        self.client = client
+
+        # gets the profiles
+        self.profiles = self.client.get_profiles()
+        self.profile_widgets = []
+
+        # by default, the active_profile is the first one
+        self.active_profile_key = list(self.profiles.keys())[0]
+        self.active_profile = self.profiles[self.active_profile_key]
 
         # creating a var for the buttons' rect because it'll be needed when cheking if the mouse is on the button
         self.back_rect = assets["back"].get_rect()
         self.back_rect.x, self.back_rect.y = (0, 0)
 
+        self.add_rect = assets["add"].get_rect()
+        self.add_rect.x, self.add_rect.y = (self.screen.get_width() - self.json_reader.config["offset_add_profile_button"] - self.add_rect.w , 60)
 
-        # creating a dict to store all the key selectors depending on what key are they bound to
-        self.key_selectors = {}
-        for i in range(len(self.json_reader.config["key_binds"])):
-            movement = list(self.json_reader.config["key_binds"].keys())[i]
-            self.key_selectors[movement] = KeySelector(self.screen, json_reader.config["key_binds"][movement],
-                                                       self.json_reader.config["offset_first_key_selector"] + i * self.json_reader.config["offset_key_selector"] + self.json_reader.config["space_text_key_selector"], self.json_reader)
-
-
+        self.profile_entry = Entry(screen, json_reader, (350, 50), (self.json_reader.config["offset_profile_entry"], 60))
 
 
     def update(self):
+        # updates the profiles if there was a change
+        if "PROFILES" in self.client.responses:
+            self.profiles = self.client.responses["PROFILES"]
+            # by default, the active_profile is the first one
+            self.active_profile_key = list(self.profiles.keys())[0]
+            self.active_profile = self.profiles[self.active_profile_key]
+
+        self.screen.fill(self.json_reader.config["bg_color"])
+
+        # updates all the profile widgets
+        for i in range(len(self.profiles)):
+            profile_widget = ProfileWidget(self.screen, self.json_reader, list(self.profiles.values())[i]["name"],
+                                           list(self.profiles.keys())[i], (400, 60), (self.screen.get_width() // 2, self.json_reader.config["offset_first_profile_widget"] + i * (self.json_reader.config["space_profile_widgets"] + 60)), side="center")
+            profile_widget.render()
+            self.profile_widgets.append(profile_widget)
+
         self.screen.blit(assets["back"], self.back_rect)
+
+        active_profile_text = self.font.render("Active profile: " + str(self.active_profile["name"]), 1, self.json_reader.config["colors"]["white"])
+        self.screen.blit(active_profile_text, (self.screen.get_width() // 2 - active_profile_text.get_width() // 2, 20))
+
+        self.profile_entry.render()
+        self.screen.blit(assets["add"], self.add_rect)
+
+        profile_text = self.font.render("Profiles: ", 1, self.json_reader.config["colors"]["white"])
+        self.screen.blit(profile_text, (self.json_reader.config["offset_profile_text"], 125))
+
+
+    def get_key_binds(self) -> dict:
+        """""
+        returns the chosen key binds
+        """""
+        return self.active_profile["key_binds"]
+
+    def change_active_profile(self, key):
+        self.active_profile_key = key
+        self.active_profile = self.profiles[key]
+
+    def add_profile(self, name: str):
+        self.client.send_request({"type": "TRANSFER", "name": "ADD_PROFILE", "receivers" : "all", "args": name})
+
+    def delete_profile(self, key):
+        self.client.send_request({"type": "TRANSFER", "name": "DELETE_PROFILE", "receivers" : "all", "args": key})
+
+
+    def handle_events(self, event: pygame.event.Event) -> str | None:
+        self.profile_entry.handle_events(event)
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+
+            if self.back_rect.collidepoint(event.pos):
+                return "welcome"
+
+            if self.add_rect.collidepoint(event.pos):
+                if self.profile_entry != "":
+                    # we add a profile with the text in the entry
+                    self.add_profile(self.profile_entry.str)
+                    # clears the entry
+                    self.profile_entry.str = ""
+
+        for profile_widgets in self.profile_widgets:
+            result = profile_widgets.handle_events(event)
+
+            if result is not None:
+                if "MODIFY" in result:
+                    pass
+
+                elif "DELETE" in result:
+                    self.delete_profile(result["DELETE"])
+
+                elif "CHOOSE" in result:
+                    self.change_active_profile(result["CHOOSE"])
+
+        return None
+
+
+
+class Profile(Frame):
+
+    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, client, profile: dict, profile_key):
+        super().__init__(screen, json_reader)
+        self.client = client
+
+        self.profile = profile
+        self.profile_key = profile_key
+
+        # creating a var for the buttons' rect because it'll be needed when cheking if the mouse is on the button
+        self.back_rect = assets["back"].get_rect()
+        self.back_rect.x, self.back_rect.y = (0, 0)
+
+        self.key_selectors = self.update_key_selectors()
+
+    def update(self):
+
+        self.key_selectors = self.update_key_selectors()
 
         # for each key selector
         for i in range(len(list(self.key_selectors.keys()))):
             # we display grid text saying what movement is the key selector bound to
-            key_text = self.font.render(list(self.key_selectors.keys())[i], 1, self.json_reader.config["colors"]["white"])
-            self.screen.blit(key_text, (self.screen.get_width() // 2 - key_text.get_width() // 2, self.json_reader.config["offset_first_key_selector"] + i * self.json_reader.config["offset_key_selector"]))
+            key_text = self.font.render(list(self.key_selectors.keys())[i], 1,
+                                        self.json_reader.config["colors"]["white"])
+            self.screen.blit(key_text, (self.screen.get_width() // 2 - key_text.get_width() // 2,
+                                        self.json_reader.config["offset_first_key_selector"] + i *
+                                        self.json_reader.config["offset_key_selector"]))
 
-            # displays the key selctor
+            # displays the key selector
             self.key_selectors[list(self.key_selectors.keys())[i]].render()
 
-    def get_key_movement(self, movement: str) -> int:
+        self.screen.blit(assets["back"], self.back_rect)
+
+    def send_changes(self):
         """""
-        returns the key bound to the movement
+        after the user modified the profile's data we send it to the server
         """""
-        return self.key_selectors[movement].nkey
+
+        self.client.send_request(self.client.send_request({"type": "POST", "name": "CHANGE_PROFILE", "args": {
+            "data": {"key": self.profile_key, "profile": self.profile}, "receiver": "all"}}))
+
+    def update_key_selectors(self) -> dict:
+        # creating a dict to store all the key selectors depending on what key are they bound to
+        key_selectors = {}
+        for i in range(len(self.profile["key_binds"])):
+            movement = list(self.profile["key_binds"].keys())[i]
+            key_selectors[movement] = KeySelector(self.screen, self.profile["key_binds"][movement],
+                                                       self.json_reader.config["offset_first_key_selector"] + i * self.json_reader.config["offset_key_selector"] + self.json_reader.config["space_text_key_selector"], self.json_reader)
+        return key_selectors
 
     def handle_events(self, event: pygame.event.Event) -> str | None:
         if event.type == pygame.KEYDOWN:
@@ -135,6 +227,7 @@ class Settings(Frame):
                 # if grid key selector is selected, its key will be the pressed one
                 if k_selector[1].selected:
                     k_selector[1].change_key(event.key)
+
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
 
@@ -146,10 +239,9 @@ class Settings(Frame):
                     k_selector[1].selected = False
 
             if self.back_rect.collidepoint(event.pos):
-                return "welcome"
+                return "settings"
 
         return None
-
 
 
 # frame when the game is over
@@ -189,119 +281,3 @@ class GameOver(Frame):
                                            (self.screen.get_width() // 2, self.json_reader.config["offset_first_rank_display"] + self.json_reader.config["space_rank_displays"] * i), "center")
                 self.rank_displays.append(rank_display)
 
-
-class RankDisplay:
-
-
-
-    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, rank: int, nickname: str, score: int,  pos:tuple, side:str="topleft"):
-        self.screen = screen
-        self.json_reader = json_reader
-        self.x_offset = self.json_reader.config["offset_rank_nickname"]
-        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
-
-
-        self.rank = rank
-        self.nickname = nickname
-        self.score = score
-
-        if self.rank in range(1, 4):
-            key = "rank" + str(self.rank)
-
-        else:
-            key = "no_rank"
-        self.image = assets[key]
-        self.rect = self.image.get_rect()
-        setattr(self.rect, side, pos)
-
-    def render(self):
-        self.screen.blit(self.image, self.rect)
-
-        rank_text = self.font.render(str(self.rank), 1, self.json_reader.config["colors"]["black"])
-        self.screen.blit(rank_text, (self.rect.x + self.x_offset, self.rect.y + self.rect.h // 2 - rank_text.get_height() // 2))
-
-        nickname_text = self.font.render(str(self.nickname), 1, self.json_reader.config["colors"]["black"])
-        self.screen.blit(nickname_text, (self.rect.x + self.x_offset + rank_text.get_width() + 10, self.rect.y + self.rect.h // 2 - nickname_text.get_height() // 2))
-
-        score_text = self.font.render(str(self.score), 1, self.json_reader.config["colors"]["black"])
-        self.screen.blit(score_text, (self.rect.x + self.rect.w - self.x_offset - score_text.get_width(), self.rect.y + self.rect.h // 2 - score_text.get_height() // 2))
-
-
-class Selector:
-
-    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, size: tuple, iter: list, pos: tuple, side:str="topleft"):
-        self.screen = screen
-        self.json_reader = json_reader
-        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
-
-        self.rect = pygame.rect.Rect(pos, size)
-        setattr(self.rect, side, pos)
-        self.list = iter
-        self.counter = 0
-
-    def next_text(self):
-        self.counter += 1
-        if self.counter >= len(self.list):
-            self.counter = 0
-
-    def get_selected_text(self) -> str:
-        return self.list[self.counter]
-
-    def render(self):
-
-        pygame.draw.rect(self.screen, self.json_reader.config["colors"]["dark_grey"], self.rect)
-
-        text = self.font.render(self.list[self.counter], 1, self.json_reader.config["colors"]["white"])
-        self.screen.blit(text, (self.rect.x + self.rect.w // 2 - text.get_width() // 2,
-                                    self.rect.y + self.rect.h // 2 - text.get_height() // 2))
-
-    def handle_events(self, event: pygame.event.Event):
-        if event.type == pygame.MOUSEBUTTONDOWN:
-
-            if self.rect.collidepoint(event.pos):
-                self.next_text()
-
-class KeySelector:
-
-    def __init__(self, screen: pygame.surface.Surface,  nkey: int, y: int, json_reader):
-        self.screen = screen
-        self.json_reader = json_reader
-        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
-
-        # the key that it is displaying
-        self.nkey = nkey
-        self.selected = False
-        self.size = (200, 50)
-        self.rect = pygame.rect.Rect((self.screen.get_width() // 2 - self.size[0] // 2, y), self.size)
-
-    def render(self):
-        """""
-        displays the key_selector at its position
-        """""
-
-        pygame.draw.rect(self.screen, self.json_reader.config["colors"]["grey"], self.rect)
-
-        key_text = self.font.render(self.get_key(self.nkey), 1, self.json_reader.config["colors"]["white"])
-        self.screen.blit(key_text, (self.rect.x + self.rect.w // 2 - key_text.get_width() // 2,
-                                    self.rect.y + self.rect.h // 2 - key_text.get_height() // 2))
-
-    def change_key(self, nkey: int):
-        """""
-        changes the nkey by n if possible
-        """""
-        # if the isn't valid
-        if self.get_key(nkey) is None:
-            print("You can't use that key, please enter another one")
-        else:
-            self.nkey = nkey
-
-    def get_key(self, nkey: int) -> str | None:
-        """""
-        returns the key name corresponding to the nkey
-        """""
-        if nkey in special_keys:
-            return special_keys[nkey]
-        elif nkey in range(self.json_reader.config["first_accepted_letter"], self.json_reader.config["last_accepted_letter"] + 1):
-            return chr(nkey)
-
-        return None

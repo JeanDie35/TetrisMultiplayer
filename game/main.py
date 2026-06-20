@@ -1,5 +1,5 @@
 from game import Game
-from frames import Welcome, Settings, GameOver
+from frames import Welcome, Settings, GameOver, Frame
 from json_reader import JSONReader
 from client import Client
 import pygame
@@ -43,7 +43,7 @@ else:
     # creating the frames
     welcome = Welcome(screen, json_reader, client)
     game = Game(screen, json_reader)
-    settings = Settings(screen, json_reader)
+    settings = Settings(screen, json_reader, client)
     game_over = GameOver(screen, json_reader, client)
 
     active_frame = welcome
@@ -87,11 +87,7 @@ else:
 
             if next_frame == game and active_frame == welcome:
 
-                game.start_game(client)
-
-                # assigning the chosen keys to game
-                for key in game.key_binds.keys():
-                    game.key_binds[key] = settings.get_key_movement(key)
+                game.start_game(client, settings.get_key_binds())
 
             active_frame = next_frame
 
@@ -111,9 +107,8 @@ else:
             external_result = active_frame.handle_events(event)
 
             if external_result is not None:
-
-                # it means that we change the frame
                 next_frame = frames[external_result]
+
                 # hiding the old widgets
                 screen.fill(BG_COLOR)
 

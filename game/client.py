@@ -109,6 +109,14 @@ class Client:
             pass
         return self.responses["NB_PLAYERS"]
 
+    def get_profiles(self):
+        # sends a request for the next block
+        self.send_request({"type": "GET", "name": "PROFILES", "args": None})
+        # waits for the server to answer
+        while not "PROFILES" in self.responses or self.responses["PROFILES"] is None:
+            pass
+        return self.responses["PROFILES"]
+
     def close_conn(self):
         # close client socket (connection to the server)
         self.socket.close()
