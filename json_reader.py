@@ -10,15 +10,6 @@ class JSONReader:
     def __init__(self):
         self.get_data()
 
-    def save_file(self):
-        self.save_config()
-        self.save_profiles()
-
-    def save_config(self):
-        with open("../config.json", "w") as file:
-            file.write(json.dumps(self.config, indent=4))
-            file.close()
-
     def save_profiles(self):
         with open("../profiles.json", "w") as file:
             file.write(json.dumps(self.profiles, indent=4))

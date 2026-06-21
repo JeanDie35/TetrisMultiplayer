@@ -99,8 +99,6 @@ else:
         for event in pygame.event.get():
 
             if event.type == pygame.QUIT:
-                # saving all the data
-                json_reader.save_file()
                 # sending a request to the server saying that we want to close the conn
                 client.send_request({"type": "EVENT", "name": "CLOSE", "args": None})
                 pygame.quit()
@@ -121,9 +119,6 @@ else:
                 # hiding the old widgets
                 screen.fill(BG_COLOR)
 
-                if active_frame == settings and next_frame == welcome:
-                    # saving the chosen keys
-                    json_reader.save_file()
                 active_frame = next_frame
 
         clock.tick(FPS)

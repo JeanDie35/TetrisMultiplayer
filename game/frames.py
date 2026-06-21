@@ -10,7 +10,12 @@ class Frame:
     def __init__(self, screen: pygame.surface.Surface,json_reader):
         self.screen = screen
         self.json_reader =json_reader
-        self.font = pygame.font.SysFont(json_reader.config["font_name"],json_reader.config["font_size"])
+        self.small_font = pygame.font.SysFont(self.json_reader.config["font_name"],
+                                              self.json_reader.config["small_font_size"])
+        self.medium_font = pygame.font.SysFont(self.json_reader.config["font_name"],
+                                               self.json_reader.config["medium_font_size"])
+        self.big_font = pygame.font.SysFont(self.json_reader.config["font_name"],
+                                            self.json_reader.config["big_font_size"])
 
     def update(self):
         return None
@@ -87,9 +92,9 @@ class Settings(Frame):
         self.back_rect.x, self.back_rect.y = (0, 0)
 
         self.add_rect = assets["add"].get_rect()
-        self.add_rect.x, self.add_rect.y = (self.screen.get_width() - self.json_reader.config["offset_add_profile_button"] - self.add_rect.w , 60)
+        self.add_rect.x, self.add_rect.y = (self.screen.get_width() - self.json_reader.config["offset_add_profile_button"] - self.add_rect.w , 70)
 
-        self.profile_entry = Entry(screen, json_reader, "rect", (350, 50), (self.json_reader.config["offset_profile_entry"], 60), "dark_grey")
+        self.profile_entry = Entry(screen, json_reader, "rect", (350, 50), (self.json_reader.config["offset_profile_entry"], 70), "dark_grey")
 
 
     def update(self):
@@ -113,14 +118,14 @@ class Settings(Frame):
 
         self.screen.blit(assets["back"], self.back_rect)
 
-        active_profile_text = self.font.render("Active profile: " + str(self.active_profile["name"]), 1, self.json_reader.config["colors"]["white"])
+        active_profile_text = self.big_font.render("Active profile: " + str(self.active_profile["name"]), 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(active_profile_text, (self.screen.get_width() // 2 - active_profile_text.get_width() // 2, 20))
 
         self.profile_entry.render()
         self.screen.blit(assets["add"], self.add_rect)
 
-        profile_text = self.font.render("Profiles: ", 1, self.json_reader.config["colors"]["white"])
-        self.screen.blit(profile_text, (self.json_reader.config["offset_profile_text"], 125))
+        profile_text = self.medium_font.render("Profiles: ", 1, self.json_reader.config["colors"]["white"])
+        self.screen.blit(profile_text, (self.json_reader.config["offset_profile_text"], 135))
 
 
     def get_key_binds(self) -> dict:
@@ -195,7 +200,7 @@ class Profile(Frame):
 
         self.profile_name_entry.render()
 
-        best_score_text = self.font.render(f"Best score : {self.profile["best_score"]}", 1, self.json_reader.config["colors"]["white"])
+        best_score_text = self.big_font.render(f"Best score : {self.profile["best_score"]}", 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(best_score_text, (self.screen.get_width() // 4 - best_score_text.get_width() // 2, 70))
 
         pygame.draw.line(self.screen, self.json_reader.config["colors"]["dark_grey"], (25, 120), (self.screen.get_width() - 25, 120), 2)
@@ -203,7 +208,7 @@ class Profile(Frame):
         # for each key selector
         for i in range(len(list(self.key_selectors.keys()))):
             # we display grid text saying what movement is the key selector bound to
-            key_text = self.font.render(list(self.key_selectors.keys())[i], 1,
+            key_text = self.medium_font.render(list(self.key_selectors.keys())[i], 1,
                                         self.json_reader.config["colors"]["white"])
             self.screen.blit(key_text, (self.screen.get_width() // 4 - key_text.get_width() // 2,
                                         self.json_reader.config["offset_first_key_selector"] + i *

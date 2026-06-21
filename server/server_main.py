@@ -2,6 +2,7 @@ import socket
 import threading
 import random
 import secrets
+import json
 
 from json_reader import JSONReader
 from tools import decode, encode, recv_nb_bytes
@@ -209,8 +210,8 @@ class Server:
                             if not profile_name in json_reader.profiles:
                                 self.create_new_profile(profile_name)
                                 self.send_data(key, "PROFILES", json_reader.profiles, request["receivers"])
-                                # saves the profiles
-                                json_reader.save_profiles()
+
+                            json_reader.save_profiles()
 
                         elif request["name"] == "DELETE_PROFILE":
                             profile_key = request["args"]
@@ -224,13 +225,13 @@ class Server:
                                     self.create_new_profile("John Doe")
 
                                 self.send_data(key, "PROFILES", json_reader.profiles, request["receivers"])
-                                # saves the profiles
+
                                 json_reader.save_profiles()
 
                         elif request["name"] == "CHANGE_PROFILE":
                             json_reader.profiles[request["args"]["data"]["key"]] = request["args"]["data"]["profile"]
                             self.send_data(key, "PROFILES", json_reader.profiles, request['args']["receivers"])
-                            # saves the profiles
+
                             json_reader.save_profiles()
 
                         # for other requests
@@ -259,6 +260,8 @@ class Server:
                         if request["name"] == "NAME":
                             self.names[key] = request['args']
 
+            except Exception as e:
+                print(e)
 
             finally:
                 self.clients[key]["online"] = False
@@ -283,6 +286,7 @@ class Server:
             print(f"Listening on {self.server_ip}:{self.port}")
 
             while True:
+
                 # accept a client connection
                 client_socket, addr = server.accept()
                 print(f"Incoming connection from {addr[0]}:{addr[1]}")
@@ -293,6 +297,7 @@ class Server:
 
         except Exception as e:
             print(f"Error: {e}")
+
         finally:
             server.close()
 

@@ -39,7 +39,10 @@ class Shape:
         self.color = self.json_reader.config["colors"][color]
         self.side = side
 
-        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
+        self.small_font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["small_font_size"])
+        self.medium_font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["medium_font_size"])
+        self.big_font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["big_font_size"])
+
 
         self.all_shapes = {
             "rect": lambda: pygame.draw.rect(self.screen, self.color, self.rect),
@@ -101,7 +104,7 @@ class ProfileWidget(Shape):
     def render(self):
         super().render()
 
-        profile_name_text = self.font.render(self.profile_name, 1, self.json_reader.config["colors"]["black"])
+        profile_name_text = self.medium_font.render(self.profile_name, 1, self.json_reader.config["colors"]["black"])
         self.screen.blit(profile_name_text, (self.rect.x + self.json_reader.config["offset_profile_name"], self.rect.y + self.rect.h // 2 - profile_name_text.get_height() // 2))
 
         self.screen.blit(assets["delete"], self.delete_rect)
@@ -133,12 +136,11 @@ class Entry(Shape):
         self.selected = False
 
         self.str = str
-        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
 
     def render(self):
         super().render()
 
-        text = self.font.render(self.str, 1, self.json_reader.config["colors"]["white"])
+        text = self.big_font.render(self.str, 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(text, (self.rect.x + self.rect.w // 2 - text.get_width() // 2, self.rect.y + self.rect.h // 2 - text.get_height() // 2))
 
     def handle_events(self,event: pygame.event.Event):
@@ -170,7 +172,7 @@ class Entry(Shape):
 
             if new_str is not None:
                 # check if the text isn't too big
-                new_text = self.font.render(new_str, 1, self.json_reader.config["colors"]["black"])
+                new_text = self.big_font.render(new_str, 1, self.json_reader.config["colors"]["black"])
                 if new_text.get_width() < self.rect.w:
                     self.str = new_str
 
@@ -201,13 +203,13 @@ class RankDisplay(Shape):
     def render(self):
         self.screen.blit(self.image, self.rect)
 
-        rank_text = self.font.render(str(self.rank), 1, self.json_reader.config["colors"]["black"])
+        rank_text = self.small_font.render(str(self.rank), 1, self.json_reader.config["colors"]["black"])
         self.screen.blit(rank_text, (self.rect.x + self.x_offset, self.rect.y + self.rect.h // 2 - rank_text.get_height() // 2))
 
-        nickname_text = self.font.render(str(self.nickname), 1, self.json_reader.config["colors"]["black"])
+        nickname_text = self.small_font.render(str(self.nickname), 1, self.json_reader.config["colors"]["black"])
         self.screen.blit(nickname_text, (self.rect.x + self.x_offset + rank_text.get_width() + 10, self.rect.y + self.rect.h // 2 - nickname_text.get_height() // 2))
 
-        score_text = self.font.render(str(self.score), 1, self.json_reader.config["colors"]["black"])
+        score_text = self.small_font.render(str(self.score), 1, self.json_reader.config["colors"]["black"])
         self.screen.blit(score_text, (self.rect.x + self.rect.w - self.x_offset - score_text.get_width(), self.rect.y + self.rect.h // 2 - score_text.get_height() // 2))
 
 
@@ -230,7 +232,7 @@ class Selector(Shape):
     def render(self):
         super().render()
 
-        text = self.font.render(self.list[self.counter], 1, self.json_reader.config["colors"]["white"])
+        text = self.medium_font.render(self.list[self.counter], 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(text, (self.rect.x + self.rect.w // 2 - text.get_width() // 2,
                                     self.rect.y + self.rect.h // 2 - text.get_height() // 2))
 
@@ -257,7 +259,7 @@ class KeySelector(Shape):
 
         super().render()
 
-        key_text = self.font.render(self.get_key(self.nkey), 1, self.json_reader.config["colors"]["white"])
+        key_text = self.medium_font.render(self.get_key(self.nkey), 1, self.json_reader.config["colors"]["black"])
         self.screen.blit(key_text, (self.rect.x + self.rect.w // 2 - key_text.get_width() // 2,
                                     self.rect.y + self.rect.h // 2 - key_text.get_height() // 2))
 

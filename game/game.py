@@ -138,7 +138,7 @@ class GameUI:
         self.json_reader = json_reader
 
         self.title = title
-        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
+        self.medium_font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["medium_font_size"])
         self.playing_screen_size = (self.json_reader.config["playing_screen_width"], self.json_reader.config["playing_screen_height"])
 
         # abscissa of the top right corner of the UI, we don't put the 
@@ -177,11 +177,11 @@ class GameUI:
                                  (x * BLOCK_SIZE + self.origin_x, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
 
     def display_title(self):
-        title_text = self.font.render(self.title, 1, self.json_reader.config["colors"]["white"])
+        title_text = self.medium_font.render(self.title, 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(title_text, (self.playing_screen_size[0] + self.json_reader.config["sidebar_offset"] + self.origin_x, 10))
 
     def display_next_block_text(self):
-        blocks_text = self.font.render("Next block:", 1, self.json_reader.config["colors"]["white"])
+        blocks_text = self.medium_font.render("Next block:", 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(blocks_text, (self.playing_screen_size[0] + self.json_reader.config["sidebar_offset"] + self.origin_x, 40))
 
     def display_next_block(self, color):
@@ -199,7 +199,7 @@ class GameUI:
 
     def display_score(self, score):
 
-        score_text = self.font.render(f"Score : {score}", 1, self.json_reader.config["colors"]["white"])
+        score_text = self.medium_font.render(f"Score : {score}", 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(score_text, (self.playing_screen_size[0] + self.json_reader.config["sidebar_offset"] + self.origin_x, 200))
 
 
