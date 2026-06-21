@@ -214,16 +214,22 @@ class Server:
 
                         elif request["name"] == "DELETE_PROFILE":
                             profile_key = request["args"]
+
                             if profile_key in json_reader.profiles:
                                 # we delete the profiles
                                 del json_reader.profiles[profile_key]
+
+                                # if there's no more profiles, we add a new one
+                                if json_reader.profiles == {}:
+                                    self.create_new_profile("John Doe")
+
                                 self.send_data(key, "PROFILES", json_reader.profiles, request["receivers"])
                                 # saves the profiles
                                 json_reader.save_profiles()
 
                         elif request["name"] == "CHANGE_PROFILE":
-                            json_reader.profiles[request["args"]["key"]] = request["args"]["profile"]
-                            self.send_data(key, "PROFILES", json_reader.profiles, request["receivers"])
+                            json_reader.profiles[request["args"]["data"]["key"]] = request["args"]["data"]["profile"]
+                            self.send_data(key, "PROFILES", json_reader.profiles, request['args']["receivers"])
                             # saves the profiles
                             json_reader.save_profiles()
 
@@ -253,8 +259,6 @@ class Server:
                         if request["name"] == "NAME":
                             self.names[key] = request['args']
 
-            except Exception as e:
-                print(e)
 
             finally:
                 self.clients[key]["online"] = False

@@ -76,12 +76,15 @@ else:
                     # sends a request to the server saying that the game is over
                     client.send_request({"type": "EVENT", "name": "GAME_OVER", "args": game.status})
 
+                # saving the score
+                settings.active_profile["best_score"] = max(game.score, settings.active_profile["best_score"])
 
                 game.reset()
 
                 # waits for the server to send the results
                 while "RESULTS" not in client.responses:
                     pass
+
                 # creating the rank displays with the results
                 game_over.create_rank_displays(client.responses["RESULTS"])
 
@@ -107,16 +110,20 @@ else:
             external_result = active_frame.handle_events(event)
 
             if external_result is not None:
-                next_frame = frames[external_result]
+
+                if isinstance(external_result, str):
+                    next_frame = frames[external_result]
+
+                # if the result is directly a Frame
+                elif isinstance(external_result, Frame):
+                    next_frame = external_result
 
                 # hiding the old widgets
                 screen.fill(BG_COLOR)
 
                 if active_frame == settings and next_frame == welcome:
                     # saving the chosen keys
-                    for movement in game.key_binds:
-                        json_reader.config["key_binds"][movement] = settings.get_key_movement(movement)
-
+                    json_reader.save_file()
                 active_frame = next_frame
 
         clock.tick(FPS)

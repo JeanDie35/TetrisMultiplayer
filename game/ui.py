@@ -147,6 +147,9 @@ class Entry(Shape):
             if self.rect.collidepoint(event.pos):
                 self.selected = True
 
+            else:
+                self.selected = False
+
         elif event.type == pygame.KEYDOWN and self.selected:
             new_str = None
             keys = pygame.key.get_pressed()
