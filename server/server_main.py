@@ -253,6 +253,9 @@ class Server:
                         if request["name"] == "NAME":
                             self.names[key] = request['args']
 
+            except Exception as e:
+                print(e)
+
             finally:
                 self.clients[key]["online"] = False
                 client_socket.close()

@@ -28,15 +28,63 @@ assets = {
         "choose": pygame.image.load("assets/choose_button.png"),
 }
 
-class ProfileWidget:
 
-    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, profile_name, profile_key, size, pos: tuple, side: str = "topleft"):
+class Shape:
+
+    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, shape: str, size: tuple, pos: tuple, color: str, side: str, radius : int):
         self.screen = screen
         self.json_reader = json_reader
-        self.rect = pygame.Rect((pos, size))
-        setattr(self.rect, side, pos)
+        self.shape = shape
+        self.rect = pygame.Rect(pos, size)
+        self.color = self.json_reader.config["colors"][color]
+        self.side = side
 
         self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
+
+        self.all_shapes = {
+            "rect": lambda: pygame.draw.rect(self.screen, self.color, self.rect),
+            "circle": lambda: pygame.draw.circle(self.screen, self.color, (self.rect.x, self.rect.y), radius),
+            "line": lambda: pygame.draw.line(self.screen, self.color, self.rect,
+                                             (self.rect.x + size[0], self.rect.y + self.rect.h)),
+            "rounded_rect": lambda: self.draw_rounded_rectangle(self.screen, self.color, self.rect, radius),
+            "none": lambda: self.draw_nothing()
+        }
+
+        setattr(self.rect, self.side, pos)
+
+
+    def draw_rounded_rectangle(self, screen: pygame.Surface, color: tuple, rect: pygame.Rect, radius: int):
+        x, y, width, height = rect
+
+        pygame.draw.rect(screen, color, (x + radius, y, width - 2 * radius, height))
+        pygame.draw.rect(screen, color, (x, y + radius, width, height - 2 * radius))
+
+        pygame.draw.circle(screen, color, (x + radius, y + radius,), radius)
+        pygame.draw.circle(screen, color, (x + width - radius, y + radius,), radius)
+        pygame.draw.circle(screen, color, (x + radius, y + height - radius), radius)
+        pygame.draw.circle(screen, color, (x + width - radius, y + height - radius,), radius)
+
+
+    def draw_rectange(self, screen: pygame.Surface, color: tuple, rect: pygame.Rect):
+        pygame.draw.rect(screen, color, rect)
+
+    def draw_circle(self, screen: pygame.Surface, color: tuple, rect: pygame.Rect, radius: int):
+        pygame.draw.circle(screen, color, rect, radius)
+
+    def draw_line(self, screen: pygame.Surface, color: tuple, start_pos: tuple, end_pos: tuple, width: int =1):
+        pygame.draw.line(screen, color, start_pos, end_pos, width)
+
+    def draw_nothing(self):
+        pass
+
+    def render(self):
+        self.all_shapes[self.shape]()
+
+
+class ProfileWidget(Shape):
+
+    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, shape: str, size: tuple, pos: tuple, color: str, profile_name, profile_key, side: str = "topleft", radius : int = 1):
+        super().__init__(screen, json_reader, shape, size, pos, color, side, radius)
 
         self.profile_name = profile_name
         self.profile_key = profile_key
@@ -51,7 +99,7 @@ class ProfileWidget:
         self.choose_rect.x, self.choose_rect.y = (self.rect.x + self.rect.w - self.json_reader.config["offset_delete_button"] - self.delete_rect.w - self.json_reader.config["space_delete_button_modify_button"] - self.modify_rect.w - self.json_reader.config["space_modify_button_choose_button"] - self.choose_rect.w, self.rect.y + self.rect.h // 2 - self.choose_rect.h // 2)
 
     def render(self):
-        pygame.draw.rect(self.screen, self.json_reader.config["colors"]["grey"], self.rect)
+        super().render()
 
         profile_name_text = self.font.render(self.profile_name, 1, self.json_reader.config["colors"]["black"])
         self.screen.blit(profile_name_text, (self.rect.x + self.json_reader.config["offset_profile_name"], self.rect.y + self.rect.h // 2 - profile_name_text.get_height() // 2))
@@ -77,21 +125,18 @@ class ProfileWidget:
         return None
 
 
-class Entry:
+class Entry(Shape):
 
-    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, size, pos: tuple, side: str = "topleft"):
-        self.screen = screen
-        self.json_reader = json_reader
-        self.rect = pygame.Rect(pos, size)
-        setattr(self.rect, side, pos)
+    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, shape: str, size: tuple, pos: tuple, color: str, side: str = "topleft", radius : int = 1, str: str = ""):
+        super().__init__(screen, json_reader, shape, size, pos, color, side, radius)
 
         self.selected = False
 
-        self.str = ""
+        self.str = str
         self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
 
     def render(self):
-        pygame.draw.rect(self.screen, self.json_reader.config["colors"]["dark_grey"], self.rect)
+        super().render()
 
         text = self.font.render(self.str, 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(text, (self.rect.x + self.rect.w // 2 - text.get_width() // 2, self.rect.y + self.rect.h // 2 - text.get_height() // 2))
@@ -128,24 +173,24 @@ class Entry:
 
 
 
-class RankDisplay:
+class RankDisplay(Shape):
 
-    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, rank: int, nickname: str, score: int,  pos:tuple, side:str="topleft"):
-        self.screen = screen
-        self.json_reader = json_reader
+    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, pos: tuple, rank: int, nickname: str, score: int, side: str = "topleft", radius : int = 1):
+        super().__init__(screen, json_reader, "none", (0, 0), pos, "white", side, radius) # as the rank display is an image, it doesn't need a shape nor a color nor a size (we use the image's size)
+
         self.x_offset = self.json_reader.config["offset_rank_nickname"]
-        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
-
 
         self.rank = rank
         self.nickname = nickname
         self.score = score
 
+        # if the player is on the podium
         if self.rank in range(1, 4):
             key = "rank" + str(self.rank)
 
         else:
             key = "no_rank"
+
         self.image = assets[key]
         self.rect = self.image.get_rect()
         setattr(self.rect, side, pos)
@@ -163,15 +208,11 @@ class RankDisplay:
         self.screen.blit(score_text, (self.rect.x + self.rect.w - self.x_offset - score_text.get_width(), self.rect.y + self.rect.h // 2 - score_text.get_height() // 2))
 
 
-class Selector:
+class Selector(Shape):
 
-    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, size: tuple, iter: list, pos: tuple, side:str="topleft"):
-        self.screen = screen
-        self.json_reader = json_reader
-        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
+    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, shape, size: tuple, pos: tuple, color: str, iter: list, side: str = "topleft", radius : int = 1):
+        super().__init__(screen, json_reader, shape, size, pos, color, side, radius)
 
-        self.rect = pygame.rect.Rect(pos, size)
-        setattr(self.rect, side, pos)
         self.list = iter
         self.counter = 0
 
@@ -184,8 +225,7 @@ class Selector:
         return self.list[self.counter]
 
     def render(self):
-
-        pygame.draw.rect(self.screen, self.json_reader.config["colors"]["dark_grey"], self.rect)
+        super().render()
 
         text = self.font.render(self.list[self.counter], 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(text, (self.rect.x + self.rect.w // 2 - text.get_width() // 2,
@@ -197,25 +237,22 @@ class Selector:
             if self.rect.collidepoint(event.pos):
                 self.next_text()
 
-class KeySelector:
+class KeySelector(Shape):
 
-    def __init__(self, screen: pygame.surface.Surface,  nkey: int, y: int, json_reader):
-        self.screen = screen
-        self.json_reader = json_reader
-        self.font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["font_size"])
+    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, shape, size: tuple, pos: tuple, color: str, nkey: int, side: str = "topleft", radius : int = 1):
+        super().__init__(screen, json_reader, shape, size, pos, color, side, radius)
 
         # the key that it is displaying
         self.nkey = nkey
         self.selected = False
         self.size = (200, 50)
-        self.rect = pygame.rect.Rect((self.screen.get_width() // 2 - self.size[0] // 2, y), self.size)
 
     def render(self):
         """""
         displays the key_selector at its position
         """""
 
-        pygame.draw.rect(self.screen, self.json_reader.config["colors"]["grey"], self.rect)
+        super().render()
 
         key_text = self.font.render(self.get_key(self.nkey), 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(key_text, (self.rect.x + self.rect.w // 2 - key_text.get_width() // 2,

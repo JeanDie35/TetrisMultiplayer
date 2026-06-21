@@ -36,8 +36,7 @@ class Welcome(Frame):
         self.settings_rect = assets["settings"].get_rect()
         self.settings_rect.x, self.settings_rect.y = (0, 0)
 
-        self.mode_selector = Selector(self.screen, self.json_reader, (200, 50), self.json_reader.config['game_modes'],
-                                      (self.screen.get_width() // 2, 5 * self.screen.get_height() // 6), "center")
+        self.mode_selector = Selector(self.screen, self.json_reader, "rect", (200, 50),(self.screen.get_width() // 2, 5 * self.screen.get_height() // 6), "dark_grey", self.json_reader.config['game_modes'],"center")
 
     def update(self):
         self.screen.blit(assets["logo"], (self.screen.get_width() // 2 - assets["logo"].get_width() // 2,
@@ -90,7 +89,7 @@ class Settings(Frame):
         self.add_rect = assets["add"].get_rect()
         self.add_rect.x, self.add_rect.y = (self.screen.get_width() - self.json_reader.config["offset_add_profile_button"] - self.add_rect.w , 60)
 
-        self.profile_entry = Entry(screen, json_reader, (350, 50), (self.json_reader.config["offset_profile_entry"], 60))
+        self.profile_entry = Entry(screen, json_reader, "rect", (350, 50), (self.json_reader.config["offset_profile_entry"], 60), "dark_grey")
 
 
     def update(self):
@@ -105,8 +104,8 @@ class Settings(Frame):
 
         # updates all the profile widgets
         for i in range(len(self.profiles)):
-            profile_widget = ProfileWidget(self.screen, self.json_reader, list(self.profiles.values())[i]["name"],
-                                           list(self.profiles.keys())[i], (400, 60), (self.screen.get_width() // 2, self.json_reader.config["offset_first_profile_widget"] + i * (self.json_reader.config["space_profile_widgets"] + 60)), side="center")
+            profile_widget = ProfileWidget(self.screen, self.json_reader, "rect", (400, 60), (self.screen.get_width() // 2, self.json_reader.config["offset_first_profile_widget"] + i * (self.json_reader.config["space_profile_widgets"] + 60)),"grey", list(self.profiles.values())[i]["name"],
+                                           list(self.profiles.keys())[i], side="center")
             profile_widget.render()
             self.profile_widgets.append(profile_widget)
 
@@ -186,7 +185,13 @@ class Profile(Frame):
 
         self.key_selectors = self.update_key_selectors()
 
+        self.profile_name_entry = Entry(self.screen, self.json_reader, "rounded_rect", (400, 30), (self.screen.get_width() // 2, 20), 'dark_grey', side='center', radius=3, str=self.profile["name"])
+
     def update(self):
+
+        self.screen.blit(assets["back"], self.back_rect)
+
+        self.profile_name_entry.render()
 
         self.key_selectors = self.update_key_selectors()
 
@@ -195,21 +200,19 @@ class Profile(Frame):
             # we display grid text saying what movement is the key selector bound to
             key_text = self.font.render(list(self.key_selectors.keys())[i], 1,
                                         self.json_reader.config["colors"]["white"])
-            self.screen.blit(key_text, (self.screen.get_width() // 2 - key_text.get_width() // 2,
+            self.screen.blit(key_text, (self.screen.get_width() // 4 - key_text.get_width() // 2,
                                         self.json_reader.config["offset_first_key_selector"] + i *
                                         self.json_reader.config["offset_key_selector"]))
 
             # displays the key selector
             self.key_selectors[list(self.key_selectors.keys())[i]].render()
 
-        self.screen.blit(assets["back"], self.back_rect)
-
     def send_changes(self):
         """""
         after the user modified the profile's data we send it to the server
         """""
 
-        self.client.send_request(self.client.send_request({"type": "POST", "name": "CHANGE_PROFILE", "args": {
+        self.client.send_request(self.client.send_request({"type": "TRANSFER", "name": "CHANGE_PROFILE", "args": {
             "data": {"key": self.profile_key, "profile": self.profile}, "receiver": "all"}}))
 
     def update_key_selectors(self) -> dict:
@@ -217,8 +220,8 @@ class Profile(Frame):
         key_selectors = {}
         for i in range(len(self.profile["key_binds"])):
             movement = list(self.profile["key_binds"].keys())[i]
-            key_selectors[movement] = KeySelector(self.screen, self.profile["key_binds"][movement],
-                                                       self.json_reader.config["offset_first_key_selector"] + i * self.json_reader.config["offset_key_selector"] + self.json_reader.config["space_text_key_selector"], self.json_reader)
+            key_selectors[movement] = KeySelector(self.screen, self.json_reader, "rect", (200, 50),
+                                                  (3 * self.screen.get_width() // 4, self.json_reader.config["offset_first_key_selector"] + i * self.json_reader.config["offset_key_selector"] + self.json_reader.config["space_text_key_selector"]), "grey",  self.profile["key_binds"][movement], side="center")
         return key_selectors
 
     def handle_events(self, event: pygame.event.Event) -> str | None:
@@ -239,6 +242,7 @@ class Profile(Frame):
                     k_selector[1].selected = False
 
             if self.back_rect.collidepoint(event.pos):
+                self.send_changes()
                 return "settings"
 
         return None
@@ -274,10 +278,9 @@ class GameOver(Frame):
         return None
 
     def create_rank_displays(self, results: list):
-        rank_displays = []
         for i in range(len(results)):
             if i + 1 <= self.json_reader.config["max_rank_display"]:
-                rank_display = RankDisplay(self.screen, self.json_reader, i + 1, list(results[i].keys())[0], list(results[i].values())[0],
-                                           (self.screen.get_width() // 2, self.json_reader.config["offset_first_rank_display"] + self.json_reader.config["space_rank_displays"] * i), "center")
+                rank_display = RankDisplay(self.screen, self.json_reader, (self.screen.get_width() // 2, self.json_reader.config["offset_first_rank_display"] + self.json_reader.config["space_rank_displays"] * i), i + 1, list(results[i].keys())[0], list(results[i].values())[0], side="center")
+
                 self.rank_displays.append(rank_display)
 
