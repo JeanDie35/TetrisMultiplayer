@@ -78,6 +78,8 @@ else:
 
                 # saving the score
                 settings.active_profile["best_score"] = max(game.score, settings.active_profile["best_score"])
+                client.send_request({"type": "TRANSFER", "name": "CHANGE_PROFILE", "args": {
+                    "data": {"key": settings.active_profile_key, "profile": settings.active_profile}, "receivers": "all"}})
 
                 game.reset()
 
