@@ -283,15 +283,20 @@ class GameOver(Frame):
         self.back_rect.x, self.back_rect.y = (0, 0)
 
         self.rank_displays = []
+        self.game_time = None
 
     def update(self):
-        for i in range(len(self.rank_displays)):
-            self.rank_displays[i].render()
 
         self.screen.blit(assets["back"], self.back_rect)
 
         self.screen.blit(assets["victory"],
-                         (self.screen.get_width() // 2 - assets["victory"].get_width() // 2, 20))
+                         (self.screen.get_width() // 2 - assets["victory"].get_width() // 2, 5))
+
+        for i in range(len(self.rank_displays)):
+            self.rank_displays[i].render()
+
+        time_text = self.medium_font.render(f"Game time : {self.game_time[0]}min {self.game_time[1]}s", 1, self.json_reader.config["colors"]["white"])
+        self.screen.blit(time_text, (self.screen.get_width() // 2 - time_text.get_width() // 2, 140))
 
     def handle_events(self, event: pygame.event.Event) -> str | None:
         if event.type == pygame.MOUSEBUTTONDOWN:

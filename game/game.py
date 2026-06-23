@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import pygame
 
@@ -203,6 +205,27 @@ class GameUI:
         self.screen.blit(score_text, (self.playing_screen_size[0] + self.json_reader.config["sidebar_offset"] + self.origin_x, 200))
 
 
+class Chronometre:
+
+    def __init__(self):
+        self.start_time = None
+        self.end_time = None
+
+    def start(self):
+        self.start_time = time.time()
+
+    def end(self):
+        self.end_time = time.time()
+
+    def get_time(self):
+        return self.get_sec_min(self.end_time - self.start_time)
+
+    def get_sec_min(self, time_in_sec):
+        minutes = int(time_in_sec // 60)
+        seconds = int(time_in_sec % 60)
+        return (minutes, seconds)
+
+
 
 class Game:
 
@@ -210,7 +233,7 @@ class Game:
         self.screen = screen
         self.json_reader = json_reader
 
-
+        self.chrono = Chronometre()
 
         self.game_ui = {"you":GameUI(self.screen, self.json_reader, "Your game", 0)}
 
@@ -279,6 +302,8 @@ class Game:
             self.game_ui["opponent"] = GameUI(self.screen, self.json_reader, "Opponent's game", self.json_reader.config["game_screen_width"])
             # resize the screen
             self.set_screen_size((self.json_reader.config["game_screen_width"] * 2, self.json_reader.config["game_screen_height"]))
+
+        self.chrono.start()
 
     def insert_blocks(self):
         """""
@@ -505,5 +530,5 @@ class Game:
         self.check_game_over()
 
         if self.over:
-            print("Game over 2")
+            self.chrono.end()
             return "game_over"

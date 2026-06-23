@@ -81,6 +81,7 @@ else:
                 client.send_request({"type": "TRANSFER", "name": "CHANGE_PROFILE", "args": {
                     "data": {"key": settings.active_profile_key, "profile": settings.active_profile}, "receivers": "all"}})
 
+                game_over.game_time = game.chrono.get_time()
                 game.reset()
 
                 # waits for the server to send the results
