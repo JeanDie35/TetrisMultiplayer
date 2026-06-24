@@ -52,15 +52,23 @@ class ActivePiece:
 
     def __init__(self, game, json_reader: JSONReader, color):
         self.color_value = int(color)
-        self.config = json_reader
+        self.json_reader = json_reader
         self.speed = 1
         self.state = 0
         self.array = blocks[self.color_value]["arrays"][self.state].copy()
         self.game = game
+
+
         # we get the coordinates of each block of the active_piece
         self.coords = self.get_coords(self.game.grid, True)
         # stores the actual positon of the array, so when it turns, it doesn't move right
         self.pos = [0, self.game.playing_screen_size[0] // 2 // BLOCK_SIZE]
+
+        # inserts the piece, if there's blocks on the pie
+        if not self.can_fit(self.array):
+            self.game.lose()
+        else:
+            self.insert_blocks()
 
     def get_coords(self, array: np.ndarray, reverse: bool) -> list:
         """""
@@ -112,7 +120,7 @@ class ActivePiece:
         """""
         movable = True
         for coords in self.coords:
-            if not (0 <= coords[0] + dy < self.game.grid.shape[0]) or not (0 <= coords[1] + dx < self.game.grid.shape[1]) or self.game.is_fixed_block((coords[0] + dy, coords[1] + dx)):
+            if not (0 <= coords[0] + dy < self.game.grid.shape[0]) or not (0 <= coords[1] + dx < self.game.grid.shape[1]) or self.is_fixed_block((coords[0] + dy, coords[1] + dx)):
                 movable = False
                 break
         return movable
@@ -127,10 +135,28 @@ class ActivePiece:
 
             if (not (0 <= coords[0] + self.pos[0] < self.game.grid.shape[0])
                     or not (0 <= coords[1] + self.pos[1] < self.game.grid.shape[1])
-                    or self.game.is_fixed_block((coords[0] + self.pos[0], coords[1] + self.pos[1]))):
+                    or self.is_fixed_block((coords[0] + self.pos[0], coords[1] + self.pos[1]))):
                 fit = False
                 break
         return fit
+
+    def insert_blocks(self):
+        """""
+        insert the moving blocks at the top of the screen
+        """""
+
+        y = self.pos[0] + self.array.shape[0]
+        x = self.pos[1] + self.array.shape[1]
+
+        for y in range(self.array.shape[0]):
+            for x in range(self.array.shape[1]):
+                if self.game.grid[self.pos[0] + y, self.pos[1] + x] == self.json_reader.config["empty"] and self.array[y, x] == self.json_reader.config["moving_block"]:
+                    self.game.grid[self.pos[0] + y, self.pos[1] + x] = self.json_reader.config["moving_block"]
+
+    def is_fixed_block(self, coords: list | tuple) -> bool:
+        print(coords, self.game.grid[coords])
+        return self.json_reader.config["first_fixed_block"] <= self.game.grid[coords] <= self.json_reader.config[
+            "last_fixed_block"]
 
 
 class GameUI:
@@ -288,7 +314,6 @@ class Game:
         print(f"Starting game with mode {self.game_mode}")
 
         self.active_piece = ActivePiece(self, self.json_reader, self.client.get_color())
-        self.insert_blocks()
 
         self.next_color = self.client.get_color()
 
@@ -304,22 +329,6 @@ class Game:
             self.set_screen_size((self.json_reader.config["game_screen_width"] * 2, self.json_reader.config["game_screen_height"]))
 
         self.chrono.start()
-
-    def insert_blocks(self):
-        """""
-        insert the moving blocks at the top of the screen
-        """""
-        y = self.active_piece.pos[0] + self.active_piece.array.shape[0]
-        x = self.active_piece.pos[1] + self.active_piece.array.shape[1]
-        # if there's grid put block where the blocks must generate
-        for color_value in range(self.json_reader.config["first_fixed_block"], self.json_reader.config["last_fixed_block"] + 1):
-            if color_value in self.grid[self.active_piece.pos[0]:y, self.active_piece.pos[1]:x]:
-                print("Game over 1")
-                self.lose()
-        self.grid[self.active_piece.pos[0]:y, self.active_piece.pos[1]:x] = self.active_piece.array
-
-    def is_fixed_block(self, coords: list | tuple) -> bool:
-        return self.json_reader.config["first_fixed_block"] <= self.grid[coords] <= self.json_reader.config["last_fixed_block"]
 
     def reset(self):
         """""
@@ -360,7 +369,6 @@ class Game:
                 self.grid = np.zeros(self.arr_size)
 
                 self.active_piece = ActivePiece(self, self.json_reader, self.client.get_color())
-                self.insert_blocks()
 
             if event.key == self.key_binds["turn right"] or event.key == self.key_binds["turn left"]:
 
@@ -375,8 +383,10 @@ class Game:
                     turned_array = self.active_piece.simulate_left_turn()
                     next_state = self.active_piece.get_next_left_state()
 
+                print("can turn" , self.active_piece.can_fit(turned_array))
                 # if it can turn
                 if self.active_piece.can_fit(turned_array):
+                    print("turning")
                     # hiding old blocks
                     for y, x in self.active_piece.coords:
                         self.grid[y, x] = 0
@@ -385,10 +395,11 @@ class Game:
                     self.active_piece.array = turned_array
                     self.active_piece.state = next_state
 
-                    self.insert_blocks()
+                    self.active_piece.insert_blocks()
                     # updating coords
                     self.active_piece.coords = self.active_piece.get_coords(self.grid, False)
 
+                    # updating the grid
                     for y, x in self.active_piece.coords:
                         self.grid[y, x] = 1
 
@@ -467,7 +478,6 @@ class Game:
         # else, we create new blocks
         self.active_piece = ActivePiece(self, self.json_reader, self.next_color)
 
-        self.insert_blocks()
         self.next_color = self.client.get_color()
 
     def send_data(self):

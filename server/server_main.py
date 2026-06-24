@@ -131,8 +131,10 @@ class Server:
             if self.clients[client]["in_game"]:
                 self.send_message(client, {"type": "RESPONSE", "name": "RESULTS", "args": self.scores})
                 self.end_game(client)
+                self.clients[client]["block"] = 0
 
         # clears the scores for the next game
+        self.blocks = [self.get_random_number()]
         self.scores = []
 
 
