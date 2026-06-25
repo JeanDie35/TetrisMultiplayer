@@ -53,10 +53,10 @@ class ActivePiece:
     def __init__(self, game, json_reader: JSONReader, color):
         self.color_value = int(color)
         self.json_reader = json_reader
-        self.speed = 1
+        self.game = game
+        self.speed = self.game.base_speed
         self.state = 0
         self.array = blocks[self.color_value]["arrays"][self.state].copy()
-        self.game = game
 
 
         # we get the coordinates of each block of the active_piece
@@ -154,7 +154,6 @@ class ActivePiece:
                     self.game.grid[self.pos[0] + y, self.pos[1] + x] = self.json_reader.config["moving_block"]
 
     def is_fixed_block(self, coords: list | tuple) -> bool:
-        print(coords, self.game.grid[coords])
         return self.json_reader.config["first_fixed_block"] <= self.game.grid[coords] <= self.json_reader.config[
             "last_fixed_block"]
 
@@ -336,6 +335,7 @@ class Game:
         """""
         self.line_broken = 0
         self.score = 0
+        self.base_speed = self.json_reader.config["base_speed"]
         self.counter = 0
         self.over = False
         # creating the numpy array
@@ -383,10 +383,8 @@ class Game:
                     turned_array = self.active_piece.simulate_left_turn()
                     next_state = self.active_piece.get_next_left_state()
 
-                print("can turn" , self.active_piece.can_fit(turned_array))
                 # if it can turn
                 if self.active_piece.can_fit(turned_array):
-                    print("turning")
                     # hiding old blocks
                     for y, x in self.active_piece.coords:
                         self.grid[y, x] = 0
@@ -447,7 +445,7 @@ class Game:
                     self.increase_score(self.json_reader.config["score_per_line"] * lines_in_a_row)
                     self.move_line_down(i)
 
-                    if self.line_broken % 10 == 0:
+                    if self.line_broken % 1 == 0:
                         self.base_speed += 0.5
 
     def handle_falling(self):
@@ -475,6 +473,9 @@ class Game:
             # creating the put blocks with the blocks color
             self.grid[co[0], co[1]] = self.active_piece.color_value
 
+        self.check_lines()
+
+        print(self.base_speed)
         # else, we create new blocks
         self.active_piece = ActivePiece(self, self.json_reader, self.next_color)
 
@@ -528,8 +529,6 @@ class Game:
 
 
     def update(self):
-
-        self.check_lines()
 
         self.handle_falling()
 

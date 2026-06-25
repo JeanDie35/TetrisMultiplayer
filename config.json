@@ -79,9 +79,10 @@
         "First to 100",
         "First to 200",
         "First to 300",
-        "No line broken"
+        "No line broken",
+        "Infinite"
     ],
     "port": 8000,
-    "server_ip": "192.168.1.23",
+    "server_ip": "192.168.1.25",
     "header_size": 4
 }
