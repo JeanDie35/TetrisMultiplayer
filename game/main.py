@@ -58,13 +58,14 @@ else:
 
     while running:
 
+        # hiding the old widgets
+        screen.fill(BG_COLOR)
+
         # handles all the transitions that are triggered by the code
         internal_result = active_frame.update()
 
         if internal_result is not None:
             next_frame = frames[internal_result]
-            # hiding the old widgets
-            screen.fill(BG_COLOR)
 
             if next_frame == game_over and active_frame == game:
 
@@ -119,8 +120,6 @@ else:
                 elif isinstance(external_result, Frame):
                     next_frame = external_result
 
-                # hiding the old widgets
-                screen.fill(BG_COLOR)
 
                 active_frame = next_frame
 

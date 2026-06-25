@@ -24,6 +24,7 @@
     "score_per_line": 5,
     "best_score": 202,
     "FPS": 60,
+    "offset_buttons": 5,
     "offset_profile_name": 20,
     "offset_delete_button": 20,
     "space_delete_button_modify_button": 15,
@@ -67,6 +68,11 @@
             48,
             48,
             48
+        ],
+        "green": [
+            0,
+            150,
+            0
         ]
     },
     "game_modes": [

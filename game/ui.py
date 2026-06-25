@@ -25,7 +25,6 @@ assets = {
         "add": pygame.image.load("assets/plus_button.png"),
         "delete": pygame.image.load("assets/delete_button.png"),
         "modify": pygame.image.load("assets/modify_button.png"),
-        "choose": pygame.image.load("assets/choose_button.png"),
 }
 
 
@@ -98,9 +97,6 @@ class ProfileWidget(Shape):
         self.modify_rect = assets["modify"].get_rect()
         self.modify_rect.x, self.modify_rect.y = (self.rect.x + self.rect.w - self.modify_rect.w - self.json_reader.config["offset_delete_button"] - self.delete_rect.w - self.json_reader.config["space_delete_button_modify_button"], self.rect.y + self.rect.h // 2 - self.modify_rect.h // 2)
 
-        self.choose_rect = assets["choose"].get_rect()
-        self.choose_rect.x, self.choose_rect.y = (self.rect.x + self.rect.w - self.json_reader.config["offset_delete_button"] - self.delete_rect.w - self.json_reader.config["space_delete_button_modify_button"] - self.modify_rect.w - self.json_reader.config["space_modify_button_choose_button"] - self.choose_rect.w, self.rect.y + self.rect.h // 2 - self.choose_rect.h // 2)
-
     def render(self):
         super().render()
 
@@ -111,8 +107,6 @@ class ProfileWidget(Shape):
 
         self.screen.blit(assets["modify"], self.modify_rect)
 
-        self.screen.blit(assets["choose"], self.choose_rect)
-
     def handle_events(self,event: pygame.event.Event):
 
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -122,7 +116,7 @@ class ProfileWidget(Shape):
             elif self.modify_rect.collidepoint(event.pos):
                 return {"MODIFY" : self.profile_key}
 
-            elif self.choose_rect.collidepoint(event.pos):
+            elif self.rect.collidepoint(event.pos):
                 return {"CHOOSE" : self.profile_key}
 
         return None
@@ -140,7 +134,12 @@ class Entry(Shape):
     def render(self):
         super().render()
 
-        text = self.big_font.render(self.str, 1, self.json_reader.config["colors"]["white"])
+        if self.selected:
+            text = self.str + "_"
+        elif not self.selected:
+            text = self.str
+
+        text = self.big_font.render(text, 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(text, (self.rect.x + self.rect.w // 2 - text.get_width() // 2, self.rect.y + self.rect.h // 2 - text.get_height() // 2))
 
     def handle_events(self,event: pygame.event.Event):
@@ -259,7 +258,12 @@ class KeySelector(Shape):
 
         super().render()
 
-        key_text = self.medium_font.render(self.get_key(self.nkey), 1, self.json_reader.config["colors"]["black"])
+        if self.selected:
+            text = f"[{self.get_key(self.nkey)}]"
+        elif not self.selected:
+            text = f"{self.get_key(self.nkey)}"
+
+        key_text = self.medium_font.render(text, 1, self.json_reader.config["colors"]["black"])
         self.screen.blit(key_text, (self.rect.x + self.rect.w // 2 - key_text.get_width() // 2,
                                     self.rect.y + self.rect.h // 2 - key_text.get_height() // 2))
 
@@ -283,3 +287,18 @@ class KeySelector(Shape):
             return chr(nkey)
 
         return None
+
+    def handle_events(self, event: pygame.event.Event):
+
+        if event.type == pygame.KEYDOWN:
+
+            # if grid key selector is selected, its key will be the pressed one
+            if self.selected:
+                self.change_key(event.key)
+
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+
+            if self.rect.collidepoint(event.pos):
+                self.selected = True
+            else:
+                self.selected = False

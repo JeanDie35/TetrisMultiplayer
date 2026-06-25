@@ -111,7 +111,12 @@ class Settings(Frame):
         # updates all the profile widgets
         self.profile_widgets = []
         for i in range(len(self.profiles)):
-            profile_widget = ProfileWidget(self.screen, self.json_reader, "rect", (400, 60), (self.screen.get_width() // 2, self.json_reader.config["offset_first_profile_widget"] + i * (self.json_reader.config["space_profile_widgets"] + 60)),"grey", list(self.profiles.values())[i]["name"],
+            if list(self.profiles.values())[i] == self.active_profile:
+                color = "green"
+            else:
+                color = "grey"
+
+            profile_widget = ProfileWidget(self.screen, self.json_reader, "rect", (400, 60), (self.screen.get_width() // 2, self.json_reader.config["offset_first_profile_widget"] + i * (self.json_reader.config["space_profile_widgets"] + 60)),color, list(self.profiles.values())[i]["name"],
                                            list(self.profiles.keys())[i], side="center")
             profile_widget.render()
             self.profile_widgets.append(profile_widget)
@@ -248,21 +253,11 @@ class Profile(Frame):
 
         self.profile_name_entry.handle_events(event)
 
-        if event.type == pygame.KEYDOWN:
-            for k_selector in self.key_selectors.values():
-                # if grid key selector is selected, its key will be the pressed one
-                if k_selector.selected:
-                    k_selector.change_key(event.key)
+        for k_selector in self.key_selectors.values():
+            k_selector.handle_events(event)
 
 
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-
-            # if the user clicks on grid key selector, it becomes selected
-            for k_selector in self.key_selectors.values():
-                if k_selector.rect.collidepoint(event.pos):
-                    k_selector.selected = True
-                else:
-                    k_selector.selected = False
+        if event.type == pygame.MOUSEBUTTONDOWN:
 
             if self.back_rect.collidepoint(event.pos):
                 self.send_changes()
