@@ -95,18 +95,21 @@ class Server:
 
         # telling the clients that the game is over and getting the score of every player
         for client in self.clients:
-            if self.clients[client]["in_game"]:
-                self.send_message(client, {"type": "GET", "name": "GAME_OVER", "args": None})
+            # we don't send the request to the client who lost or won
+            if self.clients[client]["in_game"] and client != originator_key:
+                self.send_message(client, {"type": "GET", "name": "GAME_OVER", "args": True})
 
         self.nb_players = self.get_nb_players()
+
         # waiting for the clients to send their scores and names
-        while len(self.scores) < self.nb_players:
+        while len(self.scores) < self.nb_players or len(self.names) < self.nb_players:
             pass
         self.scores = sorted(self.scores, key=lambda x: list(x.values())[0], reverse=True)
 
         # we save the originator score and delete it from self.scores
         for score in self.scores:
             if list(score.keys())[0] == originator_key:
+                print(originator_key)
                 originator_score = score[originator_key]
                 self.scores.remove(score)
                 break
@@ -121,10 +124,10 @@ class Server:
 
         # we change the keys in score by the names
         for i in range(len(self.scores)):
-            client_name = self.names[list(self.scores[i].keys())[0]]
-            self.scores.append({client_name : list(self.scores[i].values())[0]})
+            client_name = self.names[list(self.scores[0].keys())[0]]
+            self.scores.append({client_name : list(self.scores[0].values())[0]})
             # we delete the old version
-            self.scores.pop(i)
+            self.scores.pop(0)
 
         # send the results to the client and end the game
         for client in self.clients:
@@ -135,6 +138,7 @@ class Server:
 
         # clears the scores for the next game
         self.blocks = [self.get_random_number()]
+        self.names = {}
         self.scores = []
 
 
@@ -262,8 +266,7 @@ class Server:
                         if request["name"] == "NAME":
                             self.names[key] = request['args']
 
-            except Exception as e:
-                print(e)
+
 
             finally:
                 self.clients[key]["online"] = False
