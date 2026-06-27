@@ -130,12 +130,6 @@ class Settings(Frame):
         self.screen.blit(profile_text, (self.json_reader.config["offset_profile_text"], 135))
 
 
-    def get_key_binds(self) -> dict:
-        """""
-        returns the chosen key binds
-        """""
-        return self.active_profile["key_binds"]
-
     def change_active_profile(self, key):
         self.active_profile_key = key
         self.active_profile = self.profiles[key]
@@ -298,9 +292,12 @@ class GameOver(Frame):
         return None
 
     def create_rank_displays(self, results: list):
+        rank_displays = []
         for i in range(len(results)):
             if i + 1 <= self.json_reader.config["max_rank_display"]:
                 rank_display = RankDisplay(self.screen, self.json_reader, (self.screen.get_width() // 2, self.json_reader.config["offset_first_rank_display"] + self.json_reader.config["space_rank_displays"] * i), i + 1, list(results[i].keys())[0], list(results[i].values())[0], side="center")
 
-                self.rank_displays.append(rank_display)
+                rank_displays.append(rank_display)
+
+        self.rank_displays = rank_displays.copy()
 

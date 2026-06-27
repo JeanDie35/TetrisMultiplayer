@@ -74,9 +74,6 @@ class Client:
                 self.close_conn()
                 break
 
-            elif response["name"] == "GAME_OVER":
-                print("switching game over to ", response["args"])
-
 
     def send_request(self, request: dict):
 

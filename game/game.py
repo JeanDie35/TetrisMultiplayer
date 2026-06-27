@@ -160,11 +160,10 @@ class ActivePiece:
 
 class GameUI:
 
-    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, title, origin_x):
+    def __init__(self, screen: pygame.surface.Surface, json_reader: JSONReader, origin_x):
         self.screen = screen
         self.json_reader = json_reader
 
-        self.title = title
         self.medium_font = pygame.font.SysFont(self.json_reader.config["font_name"], self.json_reader.config["medium_font_size"])
         self.playing_screen_size = (self.json_reader.config["playing_screen_width"], self.json_reader.config["playing_screen_height"])
 
@@ -174,10 +173,10 @@ class GameUI:
     def is_fixed_block(self, coords: list | tuple, grid) -> bool:
         return self.json_reader.config["first_fixed_block"] <= grid[coords] <= self.json_reader.config["last_fixed_block"]
 
-    def render(self, grid, score, next_color, active_color=None):
+    def render(self, grid, score: int, next_color: int, title: str, active_color=None):
 
         self.display_grid(grid, active_color)
-        self.display_title()
+        self.display_title(title)
         self.display_next_block_text()
         self.display_next_block(next_color)
         self.display_score(score)
@@ -203,8 +202,9 @@ class GameUI:
                 self.screen.blit(blocks[active_color]["image"],
                                  (x * BLOCK_SIZE + self.origin_x, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
 
-    def display_title(self):
-        title_text = self.medium_font.render(self.title, 1, self.json_reader.config["colors"]["white"])
+    def display_title(self, title):
+
+        title_text = self.medium_font.render(title, 1, self.json_reader.config["colors"]["white"])
         self.screen.blit(title_text, (self.playing_screen_size[0] + self.json_reader.config["sidebar_offset"] + self.origin_x, 10))
 
     def display_next_block_text(self):
@@ -260,7 +260,7 @@ class Game:
 
         self.chrono = Chronometre()
 
-        self.game_ui = {"you":GameUI(self.screen, self.json_reader, "Your game", 0)}
+        self.game_ui = {"you":GameUI(self.screen, self.json_reader,  0)}
 
         # server part
         self.client = None
@@ -304,7 +304,7 @@ class Game:
         self.over = True
         self.status = "WON"
 
-    def start_game(self, client, key_binds: dict):
+    def start_game(self, client, profile: dict):
         # when starting the game, we need a client to communicate with the server
         self.client = client
         self.game_mode = self.client.responses["GAME_STARTED"]
@@ -318,12 +318,13 @@ class Game:
 
         self.nb_players = self.client.get_nb_players()
 
-        self.key_binds = key_binds
+        self.profile = profile
+        self.key_binds = self.profile["key_binds"]
 
         # if there's only 2 players playing
         if self.nb_players == 2:
             # we add another UI
-            self.game_ui["opponent"] = GameUI(self.screen, self.json_reader, "Opponent's game", self.json_reader.config["game_screen_width"])
+            self.game_ui["opponent"] = GameUI(self.screen, self.json_reader, self.json_reader.config["game_screen_width"])
             # resize the screen
             self.set_screen_size((self.json_reader.config["game_screen_width"] * 2, self.json_reader.config["game_screen_height"]))
 
@@ -493,31 +494,23 @@ class Game:
             grid[grid==1] = self.active_piece.color_value
             # transform the grid into a list of int
             grid = grid.astype(int).tolist()
-            self.client.send_request({"type": "TRANSFER", "name": "OPPONENT_GRID", "receivers" : "opponents", "args": grid})
-
-            self.client.send_request({"type": "TRANSFER", "name": "OPPONENT_SCORE", "receivers" : "opponents", "args": self.score})
-
-            self.client.send_request({"type": "TRANSFER", "name": "OPPONENT_NEXT_COLOR", "receivers" : "opponents", "args": self.next_color})
-
+            self.client.send_request({"type": "TRANSFER", "name": "OPPONENT_DATA", "receivers" : "opponents", "args": {"grid" : grid, "score": self.score, "next_color" : self.next_color, "name": self.profile["name"]}})
 
     def render(self):
         # we fill the entire screen with black so we can recreate the whole ui
         self.screen.fill(self.json_reader.config["bg_color"])
 
-        self.game_ui["you"].render(self.grid, self.score, self.next_color,
+        self.game_ui["you"].render(self.grid, self.score, self.next_color, "Your game",
                                        active_color=self.active_piece.color_value)
 
         # when we have all the informations about the opponent we can display its data
-        if 'OPPONENT_GRID' in self.client.responses and self.client.responses['OPPONENT_GRID'] is not None:
-            grid = np.array(self.client.responses["OPPONENT_GRID"])
+        if 'OPPONENT_DATA' in self.client.responses and self.client.responses['OPPONENT_DATA'] is not None:
+            grid = np.array(self.client.responses["OPPONENT_DATA"]["grid"])
+            score = self.client.responses["OPPONENT_DATA"]["score"]
+            next_color = self.client.responses["OPPONENT_DATA"]["next_color"]
+            title = self.client.responses["OPPONENT_DATA"]["name"]
 
-            if 'OPPONENT_SCORE' in self.client.responses and self.client.responses['OPPONENT_SCORE'] is not None:
-                score = self.client.responses["OPPONENT_SCORE"]
-
-                if 'OPPONENT_NEXT_COLOR' in self.client.responses and self.client.responses['OPPONENT_NEXT_COLOR'] is not None:
-                    next_color = self.client.responses["OPPONENT_NEXT_COLOR"]
-
-                    self.game_ui["opponent"].render(grid, score, next_color)
+            self.game_ui["opponent"].render(grid, score, next_color, title)
 
     def check_game_over(self):
         # when a player in the current game won or lost

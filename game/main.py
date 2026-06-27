@@ -90,16 +90,17 @@ else:
                 game.reset()
 
                 # waits for the server to send the results
-                while "RESULTS" not in client.responses:
+                while "RESULTS" not in client.responses or client.responses["RESULTS"] is None:
                     pass
 
                 # when the server sent the result, the game isn't over anymore
                 client.responses["GAME_OVER"] = None
                 # creating the rank displays with the results
                 game_over.create_rank_displays(client.responses["RESULTS"])
+                client.responses["RESULTS"] = None
 
             elif next_frame == game:
-                game.start_game(client, settings.get_key_binds())
+                game.start_game(client, settings.active_profile)
 
             active_frame = next_frame
 
