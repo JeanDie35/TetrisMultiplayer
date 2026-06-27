@@ -74,8 +74,7 @@ else:
             if next_frame == game_over and active_frame == game:
 
                 # when the game is over and the server needs the score and the name
-                client.send_request({"type": "POST", "name": "SCORE", "args": game.score})
-                client.send_request({"type": "POST", "name": "NAME", "args": settings.active_profile["name"]})
+                client.send_request({"type": "POST", "name": "GAME_OVER_DATA", "args": {"score": game.score, "name": settings.active_profile["name"]}})
 
                 if game.status is not None:
                     # sends a request to the server saying that the game is over

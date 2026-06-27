@@ -1,5 +1,4 @@
 import json
-import numpy as np
 
 def encode(msg) -> bytes:
     return json.dumps(msg).encode("utf-8")
