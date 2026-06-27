@@ -110,6 +110,7 @@ class Server:
         for score in self.scores:
             print(originator_key)
             if list(score.keys())[0] == originator_key:
+                print(originator_key)
                 originator_score = score[originator_key]
                 self.scores.remove(score)
                 break
