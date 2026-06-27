@@ -64,6 +64,10 @@ else:
         # handles all the transitions that are triggered by the code
         internal_result = active_frame.update()
 
+        # when the client has reveived the message from the server that the game is starting, we start the game
+        if "GAME_STARTED" in client.responses and client.responses["GAME_STARTED"] is not None:
+            internal_result = "game"
+
         if internal_result is not None:
             next_frame = frames[internal_result]
 
@@ -89,11 +93,12 @@ else:
                 while "RESULTS" not in client.responses:
                     pass
 
+                # when the server sent the result, the game isn't over anymore
+                client.responses["GAME_OVER"] = None
                 # creating the rank displays with the results
                 game_over.create_rank_displays(client.responses["RESULTS"])
 
-            if next_frame == game and active_frame == welcome:
-
+            elif next_frame == game:
                 game.start_game(client, settings.get_key_binds())
 
             active_frame = next_frame

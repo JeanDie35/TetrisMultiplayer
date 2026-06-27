@@ -53,9 +53,6 @@ class Welcome(Frame):
 
         self.mode_selector.render()
 
-        # when the client has reveived the message from the server that the game is starting, we start the game
-        if "GAME_STARTED" in self.client.responses and self.client.responses["GAME_STARTED"] is not None:
-            return "game"
 
     def handle_events(self, event: pygame.event.Event) -> str | None:
         self.mode_selector.handle_events(event)

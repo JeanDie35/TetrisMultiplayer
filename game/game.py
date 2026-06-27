@@ -445,7 +445,7 @@ class Game:
                     self.increase_score(self.json_reader.config["score_per_line"] * lines_in_a_row)
                     self.move_line_down(i)
 
-                    if self.line_broken % 1 == 0:
+                    if self.line_broken % 10 == 0:
                         self.base_speed += 0.5
 
     def handle_falling(self):
@@ -475,7 +475,6 @@ class Game:
 
         self.check_lines()
 
-        print(self.base_speed)
         # else, we create new blocks
         self.active_piece = ActivePiece(self, self.json_reader, self.next_color)
 
@@ -522,10 +521,10 @@ class Game:
 
     def check_game_over(self):
         # when a player in the current game won or lost
-        if "GAME_OVER" in self.client.responses and self.client.responses["GAME_OVER"] is not None:
+        if "GAME_OVER" in self.client.responses and self.client.responses["GAME_OVER"]:
+            self.client.responses["GAME_OVER"] = False
             # we don't use win() or lose() because the player did neither of those, the game was stopped by another player
             self.over = True
-            self.client.responses["GAME_OVER"] = None
 
 
     def update(self):
