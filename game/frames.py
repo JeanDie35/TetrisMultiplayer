@@ -97,7 +97,7 @@ class Settings(Frame):
     def update(self):
         # updates the profiles if there was a change
         if "PROFILES" in self.client.responses:
-            self.profiles = self.client.responses["PROFILES"]
+            self.profiles = self.client.responses["PROFILES"].response
             if self.active_profile_key not in self.profiles:
                 # by default, the active_profile is the first one
                 self.active_profile_key = list(self.profiles.keys())[0]

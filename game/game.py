@@ -307,9 +307,7 @@ class Game:
     def start_game(self, client, profile: dict):
         # when starting the game, we need a client to communicate with the server
         self.client = client
-        self.game_mode = self.client.responses["GAME_STARTED"]
-        # resets the var
-        self.client.responses["GAME_STARTED"] = None
+        self.game_mode = self.client.responses["GAME_STARTED"].response
         print(f"Starting game with mode {self.game_mode}")
 
         self.active_piece = ActivePiece(self, self.json_reader, self.client.get_color())
@@ -504,18 +502,19 @@ class Game:
                                        active_color=self.active_piece.color_value)
 
         # when we have all the informations about the opponent we can display its data
-        if 'OPPONENT_DATA' in self.client.responses and self.client.responses['OPPONENT_DATA'] is not None:
-            grid = np.array(self.client.responses["OPPONENT_DATA"]["grid"])
-            score = self.client.responses["OPPONENT_DATA"]["score"]
-            next_color = self.client.responses["OPPONENT_DATA"]["next_color"]
-            title = self.client.responses["OPPONENT_DATA"]["name"]
+        if 'OPPONENT_DATA' in self.client.responses and not self.client.responses['OPPONENT_DATA'].read:
+            grid = np.array(self.client.responses["OPPONENT_DATA"].response["grid"])
+            score = self.client.responses["OPPONENT_DATA"].response["score"]
+            next_color = self.client.responses["OPPONENT_DATA"].response["next_color"]
+            title = self.client.responses["OPPONENT_DATA"].response["name"]
 
             self.game_ui["opponent"].render(grid, score, next_color, title)
 
     def check_game_over(self):
         # when a player in the current game won or lost
-        if "GAME_OVER" in self.client.responses and self.client.responses["GAME_OVER"]:
-            self.client.responses["GAME_OVER"] = False
+        if "GAME_OVER" in self.client.responses and not self.client.responses["GAME_OVER"].read:
+            # we read the message so that the Response is now read and the program won't directly read those lines when we start a new game
+            message = self.client.responses["GAME_OVER"].message
             # we don't use win() or lose() because the player did neither of those, the game was stopped by another player
             self.over = True
 

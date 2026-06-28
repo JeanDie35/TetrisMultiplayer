@@ -66,7 +66,7 @@ class Client:
             response = decode(recv_nb_bytes(self.socket, response_size))
 
             # store the response's arguments in self.responses
-            self.responses[response["name"]] = response["args"]
+            self.responses[response["name"]] = Response(response["args"])
 
             print(f"Received from server : request {response["type"]} with name {response["name"]} with args {response["args"]} ")
 
@@ -74,18 +74,10 @@ class Client:
                 self.close_conn()
                 break
 
-            elif response["name"] == "GAME_OVER":
-                print("switching game over to ", response["args"])
-
 
     def send_request(self, request: dict):
 
         print(f"Sent request {request["type"]} with name {request['name']} with args {request['args']}")
-
-        # delete the old value so we can know when the new value has arrived
-        # only works for GET request because the others don't expect a response
-        if request["name"] in self.responses and request["type"] == 'GET':
-            self.responses[request["name"]] = None
 
 
         data = encode(request)
@@ -99,27 +91,39 @@ class Client:
         # sends a request for the next block
         self.send_request({"type": "GET", "name": "NEXT_BLOCK", "args": None})
         # waits for the server to answer
-        while not "NEXT_BLOCK" in self.responses or self.responses["NEXT_BLOCK"] is None :
+        while not "NEXT_BLOCK" in self.responses or self.responses["NEXT_BLOCK"].read:
             pass
-        return self.responses["NEXT_BLOCK"]
+        return self.responses["NEXT_BLOCK"].response
 
     def get_nb_players(self):
         # sends a request for the next block
         self.send_request({"type": "GET", "name": "NB_PLAYERS", "args": None})
         # waits for the server to answer
-        while not "NB_PLAYERS" in self.responses or self.responses["NB_PLAYERS"] is None:
+        while not "NB_PLAYERS" in self.responses or self.responses["NB_PLAYERS"].read :
             pass
-        return self.responses["NB_PLAYERS"]
+        return self.responses["NB_PLAYERS"].response
 
     def get_profiles(self):
         # sends a request for the next block
         self.send_request({"type": "GET", "name": "PROFILES", "args": None})
         # waits for the server to answer
-        while not "PROFILES" in self.responses or self.responses["PROFILES"] is None:
+        while not "PROFILES" in self.responses or self.responses["PROFILES"].read:
             pass
-        return self.responses["PROFILES"]
+        return self.responses["PROFILES"].response
 
     def close_conn(self):
         # close client socket (connection to the server)
         self.socket.close()
         print("Connection to server closed")
+
+
+class Response:
+
+    def __init__(self, response):
+        self.__response = response
+        self.read = False
+
+    @property
+    def response(self):
+        self.read = True
+        return self.__response

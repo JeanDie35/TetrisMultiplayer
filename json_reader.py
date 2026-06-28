@@ -4,9 +4,6 @@ import os
 
 class JSONReader:
 
-    config = {}
-    profiles = {}
-
     def __init__(self):
         self.get_data()
 
@@ -18,7 +15,7 @@ class JSONReader:
 
     def get_data(self):
         with open("../config.json", "r") as file:
-            self.config = json.load(file)
+            self.__config = json.load(file)
             file.close()
 
         if not os.path.isfile("../profiles.json"):
@@ -28,4 +25,6 @@ class JSONReader:
         with open("../profiles.json", "r") as file:
             self.profiles = json.load(file)
             file.close()
-
+    @property
+    def config(self):
+        return self.__config
